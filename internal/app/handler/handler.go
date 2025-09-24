@@ -96,7 +96,7 @@ func (h *Handler) GetOrderDetail(ctx *gin.Context) {
 		"order":            formData.Order,
 		"availableCameras": formData.AvailableCameras,
 		"orderServices":    formData.OrderServices,
-		"time":             time.Now().Format("02.01.2006 15:04"),
+		"time":             time.Now().Format("01.01.2003 15:04"),
 		"ordersCount":      ordersCount,
 	})
 }
