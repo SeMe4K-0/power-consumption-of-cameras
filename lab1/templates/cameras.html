@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Камеры видеонаблюдения - EnergyCam</title>
+    <link rel="stylesheet" href="/static/styles/main.css?v=5">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/cameras" class="home-link">
+                    <img src="/static/img/logo.png" alt="EnergyCam" class="img-responsive">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-cart-section">
+        <div class="container">
+            <div class="search-cart-content">
+                <div class="search-form">
+                    <form action="/cameras" method="GET">
+                        <div class="search_form">
+                            <input type="text" name="search" placeholder="Поиск товара по каталогу" 
+                                   value="{{.searchQuery}}">
+                            <button type="submit">
+                                🔍
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="cart-badge">
+                    <a href="/order/1" class="order-link">
+                        📱 <span class="badge-count">{{.ordersCount}}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="main main-page">
+        <div class="container">
+            <h1 class="text-center mb-20">Камеры видеонаблюдения</h1>
+
+
+            <div class="cameras-grid">
+                {{range .cameras}}
+                <div class="camera-card">
+                    <a href="/camera/{{.ID}}" class="camera-link">
+                        <img src="{{imageURL .ImageKey}}" 
+                             alt="{{.Name}}" 
+                             class="camera-image img-responsive"
+                             onerror="this.src='/static/img/placeholder.jpg'">
+                        
+                        <h3 class="camera-name">{{.Name}}</h3>
+                        
+                        
+                        <div class="camera-specs">
+                            <div>{{.Type}}</div>
+                            <div>{{.Resolution}}</div>
+                            <div>{{.Power}} Вт</div>
+                            {{if .NightVision}}<div>Ночное видение</div>{{end}}
+                        </div>
+                    </a>
+                </div>
+                {{else}}
+                <div class="text-center" style="grid-column: 1 / -1; padding: 40px;">
+                    <p>Нет товаров, соответствующих критериям поиска.</p>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,156 @@
+/* Reset и базовые стили */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.4; color: #333; background: #f8f8f8; width: 100%; overflow-x: hidden; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 15px; width: 100%; }
+
+/* Исправление смещения изображений */
+img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+.img-responsive { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+/* Header */
+.header { background: #fff; border-bottom: 2px solid #b40a05; padding: 15px 0; width: 100%; }
+.header-content { display: flex; justify-content: flex-start; align-items: center; width: 100%; }
+.home-link img { height: 40px; width: auto; }
+
+/* Секция поиска и корзины */
+.search-cart-section { background: #f8f8f8; border-bottom: 1px solid #ddd; padding: 15px 0; width: 100%; }
+.search-cart-content { display: flex; justify-content: space-between; align-items: center; gap: 20px; width: 100%; flex-wrap: nowrap; }
+
+/* Поисковая форма */
+.search-form { flex: 1; min-width: 0; }
+.search_form { display: flex; width: 100%; border: 1px solid #ccc; border-radius: 3px; overflow: hidden; }
+.search_form input[type="text"] { flex: 1; padding: 8px 12px; border: none; outline: none; font-size: 14px; color: #333; }
+.search_form input[type="text"]::placeholder { color: #999; }
+.search_form button { padding: 8px 15px; background: #b40a05; color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: bold; min-width: 50px; }
+.search_form button:hover { background: #d32f2f; }
+
+/* Корзина */
+.cart-badge { flex-shrink: 0; }
+.order-link { display: inline-block; background: #b40a05; color: #fff; padding: 8px 15px; border-radius: 3px; text-decoration: none; font-size: 14px; font-weight: bold; }
+.order-link:hover { background: #d32f2f; color: #fff; text-decoration: none; }
+.badge-count { background: #fff; color: #b40a05; border-radius: 50%; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-left: 5px; }
+
+/* Основной контент */
+.main { padding: 20px 0; min-height: calc(100vh - 100px); width: 100%; }
+
+/* Заголовки */
+h1 { font-size: 24px; font-weight: bold; color: #333; margin-bottom: 20px; text-align: center; }
+h2 { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; }
+h3 { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 10px; }
+
+
+/* Сетка камер */
+.cameras-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; width: 100%; }
+.camera-card { background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 15px; transition: all 0.3s ease; }
+.camera-card:hover { border-color: #b40a05; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.camera-link { text-decoration: none; color: inherit; display: block; }
+.camera-image { width: 100%; height: 180px; object-fit: contain; margin: 0 auto 10px auto; padding: 10px; background: #f8f8f8; border-radius: 3px; display: block; }
+.camera-name { font-size: 14px; font-weight: bold; color: #b40a05; margin-bottom: 8px; line-height: 1.3; min-height: 35px; }
+.camera-specs { font-size: 12px; color: #666; line-height: 1.4; }
+.camera-specs div { margin-bottom: 3px; padding: 2px 0; border-bottom: 1px solid #f0f0f0; }
+
+/* Страница детального просмотра */
+.product-info { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 5px; border: 1px solid #ddd; width: 100%; }
+.image-container { background: #f8f8f8; border-radius: 5px; padding: 15px; border: 1px solid #ddd; text-align: center; display: flex; align-items: center; justify-content: center; }
+.product-image { max-width: 100%; height: 300px; object-fit: contain; border-radius: 3px; display: block; margin: 0 auto; }
+.product-title { font-size: 20px; font-weight: bold; color: #333; margin-bottom: 15px; line-height: 1.3; }
+.availability { font-size: 14px; color: #28a745; font-weight: bold; margin-bottom: 20px; text-align: center; background: #d4edda; padding: 8px; border-radius: 3px; border: 1px solid #c3e6cb; }
+.product-specs { background: #f8f8f8; padding: 15px; border-radius: 3px; border: 1px solid #ddd; }
+.spec-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #e0e0e0; font-size: 14px; }
+.spec-item:last-child { border-bottom: none; }
+.spec-label { font-weight: bold; color: #333; }
+.spec-value { color: #666; }
+
+/* Страница заявки */
+.order-detail { background: #fff; border-radius: 5px; border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; width: 100%; }
+.order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #b40a05; width: 100%; }
+.order-header h1 { font-size: 20px; font-weight: bold; color: #333; margin: 0; text-align: left; }
+
+/* Поля заявки от пользователя */
+.order-user-fields { background: #f8f8f8; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ddd; width: 100%; }
+.order-user-fields h2 { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; border-bottom: 1px solid #b40a05; padding-bottom: 5px; }
+.user-fields-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+.user-field { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.user-field label { font-size: 12px; font-weight: bold; color: #666; }
+.user-field input, .user-field select, .user-field textarea { padding: 8px 12px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px; background: #fff; }
+.user-field input[readonly], .user-field select[readonly], .user-field textarea[readonly] { background: #f5f5f5; color: #666; }
+.user-field textarea { min-height: 60px; resize: vertical; }
+
+/* Результаты расчетов */
+.order-calculations { background: #f8f8f8; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ddd; width: 100%; }
+.order-calculations h2 { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; border-bottom: 1px solid #b40a05; padding-bottom: 5px; }
+.calculations-grid { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+.calc-field { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.calc-field label { font-size: 12px; font-weight: bold; color: #666; }
+.calc-field input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 3px; font-size: 14px; background: #fff; }
+.calc-field input[readonly] { background: #f5f5f5; color: #666; }
+.calc-field.total input { background: #f5f5f5; border-color: #ddd; font-weight: normal; }
+
+/* Состав услуг */
+.order-services { background: #fff; padding: 20px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ddd; width: 100%; }
+.order-services h2 { font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px; border-bottom: 1px solid #b40a05; padding-bottom: 5px; }
+
+/* Карточки услуг */
+.service-card { display: flex; background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 20px; margin-bottom: 20px; transition: all 0.3s ease; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.service-card:hover { border-color: #b40a05; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.service-image { flex-shrink: 0; width: 120px; height: 120px; margin-right: 20px; background: #f8f8f8; border-radius: 5px; padding: 10px; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; }
+.service-image img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
+.service-fields { flex: 1; display: flex; flex-direction: column; gap: 15px; width: 100%; }
+
+/* Основные поля услуги */
+.service-main-fields { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+.service-field { display: flex; flex-direction: column; gap: 5px; min-width: 150px; flex: 1; }
+.service-field label { font-size: 11px; font-weight: bold; color: #666; }
+.service-field input { padding: 6px 10px; border: 1px solid #ddd; border-radius: 3px; font-size: 13px; background: #f5f5f5; color: #666; }
+.service-field input[readonly] { background: #f5f5f5; color: #666; }
+
+/* Поля для редактирования */
+.service-edit-fields { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; background: #f8f9fa; padding: 15px; border-radius: 5px; border: 1px solid #e9ecef; }
+.edit-field { display: flex; flex-direction: column; gap: 5px; min-width: 120px; flex: 1; }
+.edit-field label { font-size: 11px; font-weight: bold; color: #495057; }
+.edit-field input, .edit-field select { padding: 6px 10px; border: 1px solid #ced4da; border-radius: 3px; font-size: 13px; background: #fff; }
+.edit-field input:focus, .edit-field select:focus { outline: none; border-color: #b40a05; box-shadow: 0 0 0 2px rgba(180, 10, 5, 0.1); }
+
+/* Пустые услуги */
+.empty-services { text-align: center; padding: 40px 20px; background: #f8f8f8; border-radius: 5px; border: 2px dashed #b40a05; margin-bottom: 20px; width: 100%; }
+.empty-services p { font-size: 14px; color: #999; }
+
+/* Пустая заявка */
+.empty-order { text-align: center; padding: 40px 20px; background: #f8f8f8; border-radius: 3px; border: 2px dashed #b40a05; margin-bottom: 20px; width: 100%; }
+.empty-order h2 { font-size: 18px; color: #666; margin-bottom: 10px; }
+.empty-order p { font-size: 14px; color: #999; }
+
+
+/* Действия */
+.order-actions { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; width: 100%; }
+.back-btn { display: inline-block; background: #6c757d; color: #fff; padding: 8px 15px; border-radius: 3px; text-decoration: none; font-size: 14px; font-weight: bold; transition: all 0.3s ease; }
+.back-btn:hover { background: #5a6268; color: #fff; text-decoration: none; }
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+    .product-info { grid-template-columns: 1fr; gap: 20px; }
+    .service-card { flex-direction: column; }
+    .service-image { width: 100%; height: 150px; margin-right: 0; margin-bottom: 15px; }
+}
+
+@media (max-width: 768px) {
+    .search-cart-content { flex-direction: row; gap: 15px; align-items: center; flex-wrap: nowrap; }
+    .search-form { flex: 1; min-width: 0; }
+    .cart-badge { flex-shrink: 0; }
+    .cameras-grid { grid-template-columns: 1fr; gap: 15px; }
+    .service-card { flex-direction: column; }
+    .service-image { width: 100%; height: 150px; margin-right: 0; margin-bottom: 15px; }
+}
+@media (max-width: 480px) {
+    .container { padding: 0 10px; }
+    .search-cart-content { gap: 10px; flex-wrap: nowrap; }
+    .search-form { flex: 1; min-width: 0; }
+    .cart-badge { flex-shrink: 0; }
+    .camera-card { padding: 10px; }
+    .camera-image { height: 150px; }
+    .camera-name { font-size: 13px; min-height: 30px; }
+    .product-title { font-size: 18px; }
+    .order-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+    .order-header h1 { font-size: 18px; }
+}
+

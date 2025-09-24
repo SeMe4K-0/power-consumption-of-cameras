@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заявка #{{.order.ID}} - Расчет энергопотребления</title>
+    <link rel="stylesheet" href="/static/styles/main.css?v=18">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/cameras" class="home-link">
+                    <img src="/static/img/logo.png" alt="Главная" class="img-responsive">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-cart-section">
+        <div class="container">
+            <div class="search-cart-content">
+                <div class="search-form">
+                    <form action="/cameras" method="GET">
+                        <div class="search_form">
+                            <input type="text" name="search" placeholder="Поиск товара по каталогу">
+                            <button type="submit">
+                                🔍
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="cart-badge">
+                    <a href="/order/1" class="order-link">
+                        📱 <span class="badge-count">{{.ordersCount}}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="main">
+        <div class="container">
+
+            <div class="order-detail">
+                <div class="order-header">
+                    <h1>Заявка на расчет энергопотребления #{{.order.ID}}</h1>
+                </div>
+
+                    <!-- Поля заявки от пользователя -->
+                    <div class="order-user-fields">
+                        <h2>Данные заявки</h2>
+                        <div class="user-fields-grid">
+                            <div class="user-field">
+                                <label>Клиент:</label>
+                                <input type="text" value="{{.order.ClientName}}" readonly placeholder="Введите название клиента">
+                            </div>
+                            <div class="user-field">
+                                <label>Проект:</label>
+                                <input type="text" value="{{.order.ProjectName}}" readonly placeholder="Введите название проекта">
+                            </div>
+                            <div class="user-field">
+                                <label>Тариф электроэнергии (руб/кВт·ч):</label>
+                                <input type="number" value="{{printf "%.1f" .order.Tariff}}" step="0.1" readonly placeholder="Введите тариф">
+                            </div>
+                            <div class="user-field">
+                                <label>Дата создания:</label>
+                                <input type="date" value="2024-01-15" readonly placeholder="Выберите дату">
+                            </div>
+                            <div class="user-field">
+                                <label>Комментарий:</label>
+                                <textarea readonly placeholder="Дополнительная информация о заявке..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                <!-- Результаты расчетов -->
+                {{if .orderServices}}
+                <div class="order-calculations">
+                    <h2>Расчёт энергопотребления</h2>
+                    <div class="calculations-grid">
+                        <div class="calc-field">
+                            <label>Общая мощность системы (Вт):</label>
+                            <input type="number" value="{{printf "%.1f" .order.TotalPower}}" step="0.1" readonly placeholder="Автоматический расчет">
+                        </div>
+                        <div class="calc-field">
+                            <label>Суточное потребление (кВт·ч):</label>
+                            <input type="number" value="{{printf "%.2f" .order.DailyEnergy}}" step="0.01" readonly placeholder="Автоматический расчет">
+                        </div>
+                        <div class="calc-field">
+                            <label>Месячное потребление (кВт·ч):</label>
+                            <input type="number" value="{{printf "%.2f" (multiply .order.DailyEnergy 30)}}" step="0.01" readonly placeholder="Автоматический расчет">
+                        </div>
+                        <div class="calc-field total">
+                            <label>Стоимость эксплуатации в месяц (руб.):</label>
+                            <input type="number" value="{{printf "%.0f" .order.MonthlyCost}}" readonly placeholder="Автоматический расчет">
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+
+                <!-- Состав услуг -->
+                <div class="order-services">
+                    <h2>Состав системы видеонаблюдения</h2>
+                    {{if .orderServices}}
+                        {{range .orderServices}}
+                        <div class="service-card">
+                            <div class="service-image">
+                                <img src="{{imageURL .Camera.ImageKey}}" alt="{{.Camera.Name}}" 
+                                     onerror="this.src='/static/img/placeholder.jpg'">
+                            </div>
+                            
+                            <div class="service-fields">
+                                <div class="service-main-fields">
+                                    <div class="service-field">
+                                        <label>Название:</label>
+                                        <input type="text" value="{{.Camera.Name}}" readonly placeholder="Название камеры">
+                                    </div>
+                                    <div class="service-field">
+                                        <label>Тип:</label>
+                                        <input type="text" value="{{.Camera.Type}}" readonly placeholder="Тип камеры">
+                                    </div>
+                                    <div class="service-field">
+                                        <label>Разрешение:</label>
+                                        <input type="text" value="{{.Camera.Resolution}}" readonly placeholder="Разрешение камеры">
+                                    </div>
+                                    <div class="service-field">
+                                        <label>Мощность/шт (Вт):</label>
+                                        <input type="number" value="{{.Camera.Power}}" step="0.1" readonly placeholder="Мощность камеры">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {{end}}
+                    {{else}}
+                        <div class="empty-services">
+                            <p>В заявке пока нет услуг</p>
+                        </div>
+                    {{end}}
+                </div>
+
+            </div>
+        </div>
+    </main>
+</body>
+</html>
