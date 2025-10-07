@@ -27,6 +27,15 @@ func StartServer() {
 		"multiply": func(a, b float64) float64 {
 			return a * b
 		},
+		"divide": func(a, b float64) float64 {
+			if b == 0 {
+				return 0
+			}
+			return a / b
+		},
+		"float64": func(i int) float64 {
+			return float64(i)
+		},
 		"imageURL": func(key string) string {
 			if strings.HasPrefix(key, "http://") || strings.HasPrefix(key, "https://") {
 				return key
@@ -42,13 +51,13 @@ func StartServer() {
 	// Три Get запроса
 	r.GET("/cameras", handlers.GetCameras)
 	r.GET("/camera/:id", handlers.GetCameraDetail)
-	r.GET("/order/:id", handlers.GetOrderDetail)
+	r.GET("/electricity-calculation/:id", handlers.GetOrderDetail)
 
 	log.Println("Сервер запущен на http://localhost:8080")
 	log.Println("Доступные страницы:")
 	log.Println("  GET /cameras - Список камер")
 	log.Println("  GET /camera/:id - Детали камеры")
-	log.Println("  GET /order/:id - Детали заявки")
+	log.Println("  GET /electricity-calculation/:id - Детали заявки")
 
 	r.Run()
 	log.Println("Server down")

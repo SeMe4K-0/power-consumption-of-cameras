@@ -24,7 +24,7 @@ func (h *Handler) GetCameras(ctx *gin.Context) {
 	var cameras []models.Camera
 	var err error
 
-	searchQuery := ctx.Query("search")
+	searchQuery := ctx.Query("cameras")
 
 	if searchQuery != "" {
 		cameras, err = h.Repository.GetCamerasBySearch(searchQuery)
@@ -53,14 +53,14 @@ func (h *Handler) GetCameraDetail(ctx *gin.Context) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		logrus.Error("Неверный ID камеры: ", err)
-		ctx.Redirect(http.StatusFound, "/cameras")
+		ctx.Redirect(http.StatusFound, "/electricity-calculation/1")
 		return
 	}
 
 	camera, err := h.Repository.GetCameraByID(id)
 	if err != nil {
 		logrus.Error("Камера не найдена: ", err)
-		ctx.Redirect(http.StatusFound, "/cameras")
+		ctx.Redirect(http.StatusFound, "/electricity-calculation/1")
 		return
 	}
 
@@ -79,14 +79,14 @@ func (h *Handler) GetOrderDetail(ctx *gin.Context) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		logrus.Error("Неверный ID заявки: ", err)
-		ctx.Redirect(http.StatusFound, "/cameras")
+		ctx.Redirect(http.StatusFound, "/electricity-calculation/1")
 		return
 	}
 
 	formData, err := h.Repository.GetOrderFormData(id)
 	if err != nil {
 		logrus.Error("Ошибка получения данных заявки: ", err)
-		ctx.Redirect(http.StatusFound, "/cameras")
+		ctx.Redirect(http.StatusFound, "/electricity-calculation/1")
 		return
 	}
 
@@ -95,7 +95,8 @@ func (h *Handler) GetOrderDetail(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "order_detail.html", gin.H{
 		"order":            formData.Order,
 		"availableCameras": formData.AvailableCameras,
-		"orderServices":    formData.OrderServices,
+		"orderCameras":     formData.Order.Cameras,
+		"calculations":     formData.Calculations,
 		"time":             time.Now().Format("01.01.2003 15:04"),
 		"ordersCount":      ordersCount,
 	})

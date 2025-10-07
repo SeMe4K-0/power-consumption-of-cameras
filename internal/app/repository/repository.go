@@ -9,6 +9,7 @@ type Repository struct {
 	cameras       []models.Camera
 	orders        map[int]models.EnergyOrder
 	orderServices []models.OrderService
+	calculations  []models.EnergyCalculation
 }
 
 func NewRepository() (*Repository, error) {
@@ -65,7 +66,7 @@ func NewRepository() (*Repository, error) {
 		},
 	}
 
-	// Создаем заявку для работы
+	// Создаем заявку для работы с вложенными камерами
 	orders := map[int]models.EnergyOrder{
 		1: {
 			ID:          1,
@@ -76,6 +77,26 @@ func NewRepository() (*Repository, error) {
 			Status:      "В работе",
 			ClientName:  "ООО 'ТехноСервис'",
 			ProjectName: "Система видеонаблюдения офиса",
+			Cameras: []models.OrderCamera{
+				{
+					Camera:   cameras[0], // Hikvision DS-2CD2043G0-I
+					Quantity: 1,
+					Hours:    24,
+					Comment:  "Камера для входа",
+				},
+				{
+					Camera:   cameras[1], // Dahua IPC-HFW2831T-ZS
+					Quantity: 1,
+					Hours:    24,
+					Comment:  "Уличная камера",
+				},
+				{
+					Camera:   cameras[4], // Reolink RLC-811A
+					Quantity: 1,
+					Hours:    24,
+					Comment:  "Камера с зумом",
+				},
+			},
 		},
 	}
 
@@ -91,10 +112,45 @@ func NewRepository() (*Repository, error) {
 		},
 	}
 
+	// Создаем расчеты электроэнергии на основе камер видеонаблюдения
+	calculations := []models.EnergyCalculation{
+		{
+			ID:               1,
+			Name:             "Hikvision DS-2CD2043G0-I",
+			Power:            7.5,
+			DailyConsumption: 0.18,  // 7.5 * 24 / 1000
+			MonthlyCost:      28.08, // 0.18 * 30 * 5.2
+			ImageKey:         "http://127.0.0.1:9000/camers/DS-2CD2043G0-I.jpg",
+			Description:      "4-мегапиксельная купольная камера",
+			Category:         "Видеонаблюдение",
+		},
+		{
+			ID:               2,
+			Name:             "Dahua IPC-HFW2831T-ZS",
+			Power:            12.0,
+			DailyConsumption: 0.288, // 12.0 * 24 / 1000
+			MonthlyCost:      44.93, // 0.288 * 30 * 5.2
+			ImageKey:         "http://127.0.0.1:9000/camers/IPC-HFW2831T-ZS.png",
+			Description:      "8-мегапиксельная уличная камера",
+			Category:         "Видеонаблюдение",
+		},
+		{
+			ID:               3,
+			Name:             "Reolink RLC-811A",
+			Power:            15.3,
+			DailyConsumption: 0.367, // 15.3 * 24 / 1000
+			MonthlyCost:      57.25, // 0.367 * 30 * 5.2
+			ImageKey:         "http://127.0.0.1:9000/camers/Reolink%20RLC-811A.jpg",
+			Description:      "Уличная камера 8MP с зумом",
+			Category:         "Видеонаблюдение",
+		},
+	}
+
 	return &Repository{
 		cameras:       cameras,
 		orders:        orders,
 		orderServices: orderServices,
+		calculations:  calculations,
 	}, nil
 }
 
@@ -143,25 +199,10 @@ func (r *Repository) GetOrderFormData(orderID int) (models.OrderFormData, error)
 		return models.OrderFormData{}, fmt.Errorf("заявка с ID %d не найдена", orderID)
 	}
 
-	// Получаем связи заявка-услуга для данной заявки
-	var orderServices []models.OrderServiceWithCamera
-	for _, service := range r.orderServices {
-		if service.OrderID == orderID {
-			camera, err := r.GetCameraByID(service.CameraID)
-			if err != nil {
-				continue // Пропускаем несуществующие камеры
-			}
-			orderServices = append(orderServices, models.OrderServiceWithCamera{
-				OrderService: service,
-				Camera:       camera,
-			})
-		}
-	}
-
 	return models.OrderFormData{
 		Order:            order,
 		AvailableCameras: r.cameras,
-		OrderServices:    orderServices,
+		Calculations:     r.calculations,
 	}, nil
 }
 

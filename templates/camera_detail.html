@@ -23,7 +23,7 @@
                 <div class="search-form">
                     <form action="/cameras" method="GET">
                         <div class="search_form">
-                            <input type="text" name="search" placeholder="Поиск товара по каталогу">
+                            <input type="text" name="search" placeholder="Поиск по камерам">
                             <button type="submit">
                                 🔍
                             </button>
@@ -32,7 +32,7 @@
                 </div>
                 
                 <div class="cart-badge">
-                    <a href="/order/1" class="order-link">
+                    <a href="/electricity-calculation/1" class="order-link">
                         📱 <span class="badge-count">{{.ordersCount}}</span>
                     </a>
                 </div>
@@ -58,8 +58,6 @@
                         <h1 class="product-title">{{.camera.Name}}</h1>
                         
                         
-                        <div class="availability">✓ В наличии</div>
-
                         <div class="product-specs">
                             <div class="spec-item">
                                 <span class="spec-label">Тип:</span>

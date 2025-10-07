@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Заявка #{{.order.ID}} - Расчет энергопотребления</title>
-    <link rel="stylesheet" href="/static/styles/main.css?v=18">
+    <title>Расчёт № {{.order.ID}} - Электроэнергия</title>
+    <link rel="stylesheet" href="/static/styles/main.css?v=19">
 </head>
 <body>
     <header class="header">
@@ -23,7 +23,7 @@
                 <div class="search-form">
                     <form action="/cameras" method="GET">
                         <div class="search_form">
-                            <input type="text" name="search" placeholder="Поиск товара по каталогу">
+                            <input type="text" name="cameras" placeholder="Поиск по камерам">
                             <button type="submit">
                                 🔍
                             </button>
@@ -32,7 +32,7 @@
                 </div>
                 
                 <div class="cart-badge">
-                    <a href="/order/1" class="order-link">
+                    <a href="/electricity-calculation/1" class="order-link">
                         📱 <span class="badge-count">{{.ordersCount}}</span>
                     </a>
                 </div>
@@ -42,106 +42,138 @@
 
     <main class="main">
         <div class="container">
-
-            <div class="order-detail">
-                <div class="order-header">
-                    <h1>Заявка на расчет энергопотребления #{{.order.ID}}</h1>
+            <div class="calculation-page">
+                <!-- Поле названия расчета -->
+                <div class="calculation-name-section">
+                    <label class="calculation-name-label">Название расчёта:</label>
+                    <input type="text" class="calculation-name-input" value="{{.order.ProjectName}}" placeholder="Введите название расчёта">
                 </div>
 
-                    <!-- Поля заявки от пользователя -->
-                    <div class="order-user-fields">
-                        <h2>Данные заявки</h2>
-                        <div class="user-fields-grid">
-                            <div class="user-field">
-                                <label>Клиент:</label>
-                                <input type="text" value="{{.order.ClientName}}" readonly placeholder="Введите название клиента">
-                            </div>
-                            <div class="user-field">
-                                <label>Проект:</label>
-                                <input type="text" value="{{.order.ProjectName}}" readonly placeholder="Введите название проекта">
-                            </div>
-                            <div class="user-field">
-                                <label>Тариф электроэнергии (руб/кВт·ч):</label>
-                                <input type="number" value="{{printf "%.1f" .order.Tariff}}" step="0.1" readonly placeholder="Введите тариф">
-                            </div>
-                            <div class="user-field">
-                                <label>Дата создания:</label>
-                                <input type="date" value="2024-01-15" readonly placeholder="Выберите дату">
-                            </div>
-                            <div class="user-field">
-                                <label>Комментарий:</label>
-                                <textarea readonly placeholder="Дополнительная информация о заявке..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                <!-- Результаты расчетов -->
-                {{if .orderServices}}
-                <div class="order-calculations">
-                    <h2>Расчёт энергопотребления</h2>
-                    <div class="calculations-grid">
-                        <div class="calc-field">
-                            <label>Общая мощность системы (Вт):</label>
-                            <input type="number" value="{{printf "%.1f" .order.TotalPower}}" step="0.1" readonly placeholder="Автоматический расчет">
-                        </div>
-                        <div class="calc-field">
-                            <label>Суточное потребление (кВт·ч):</label>
-                            <input type="number" value="{{printf "%.2f" .order.DailyEnergy}}" step="0.01" readonly placeholder="Автоматический расчет">
-                        </div>
-                        <div class="calc-field">
-                            <label>Месячное потребление (кВт·ч):</label>
-                            <input type="number" value="{{printf "%.2f" (multiply .order.DailyEnergy 30)}}" step="0.01" readonly placeholder="Автоматический расчет">
-                        </div>
-                        <div class="calc-field total">
-                            <label>Стоимость эксплуатации в месяц (руб.):</label>
-                            <input type="number" value="{{printf "%.0f" .order.MonthlyCost}}" readonly placeholder="Автоматический расчет">
-                        </div>
-                    </div>
+                <!-- Заголовок страницы -->
+                <div class="page-header">
+                    <h1>Расчёт № {{.order.ID}}</h1>
                 </div>
-                {{end}}
 
-                <!-- Состав услуг -->
-                <div class="order-services">
-                    <h2>Состав системы видеонаблюдения</h2>
-                    {{if .orderServices}}
-                        {{range .orderServices}}
-                        <div class="service-card">
-                            <div class="service-image">
-                                <img src="{{imageURL .Camera.ImageKey}}" alt="{{.Camera.Name}}" 
-                                     onerror="this.src='/static/img/placeholder.jpg'">
-                            </div>
-                            
-                            <div class="service-fields">
-                                <div class="service-main-fields">
-                                    <div class="service-field">
-                                        <label>Название:</label>
-                                        <input type="text" value="{{.Camera.Name}}" readonly placeholder="Название камеры">
-                                    </div>
-                                    <div class="service-field">
-                                        <label>Тип:</label>
-                                        <input type="text" value="{{.Camera.Type}}" readonly placeholder="Тип камеры">
-                                    </div>
-                                    <div class="service-field">
-                                        <label>Разрешение:</label>
-                                        <input type="text" value="{{.Camera.Resolution}}" readonly placeholder="Разрешение камеры">
-                                    </div>
-                                    <div class="service-field">
-                                        <label>Мощность/шт (Вт):</label>
-                                        <input type="number" value="{{.Camera.Power}}" step="0.1" readonly placeholder="Мощность камеры">
-                                    </div>
-                                </div>
-                            </div>
+                <!-- Поле тарифа -->
+                <div class="tariff-section">
+                    <label class="tariff-label">Тариф электроэнергии:</label>
+                    <input type="number" class="tariff-input" id="tariffInput" value="{{.order.Tariff}}" min="0.1" max="20" step="0.1" placeholder="Введите тариф">
+                    <span class="tariff-unit">руб/кВт·ч</span>
+                </div>
+
+                <!-- Заголовок таблицы -->
+                <div class="table-header">
+                    <div class="table-header-cell">Изображение</div>
+                    <div class="table-header-cell">Название</div>
+                    <div class="table-header-cell">Количество</div>
+                    <div class="table-header-cell">Мощность</div>
+                    <div class="table-header-cell">Часы в сутки</div>
+                    <div class="table-header-cell">Суточное потребление</div>
+                    <div class="table-header-cell">Стоимость за месяц</div>
+                </div>
+
+                <!-- Карточки камер из заявки -->
+                <div class="calculations-container">
+                    {{range .orderCameras}}
+                    <div class="calculation-card">
+                        <div class="calculation-image">
+                            <img src="{{.Camera.ImageKey}}" alt="{{.Camera.Name}}" onerror="this.src='/static/img/placeholder.jpg'">
                         </div>
-                        {{end}}
-                    {{else}}
-                        <div class="empty-services">
-                            <p>В заявке пока нет услуг</p>
+                        
+                        <div class="calculation-info">
+                            <div class="calculation-name">{{.Camera.Name}}</div>
+                            <button class="details-btn">Подробнее</button>
                         </div>
+                        
+                        <div class="calculation-quantity">
+                            <input type="number" class="quantity-input" value="{{.Quantity}}" min="1" max="100" step="1">
+                            <div class="quantity-unit">шт</div>
+                        </div>
+                        
+                        <div class="calculation-power">
+                            <div class="power-value">{{printf "%.1f" .Camera.Power}}</div>
+                            <div class="power-unit">Вт</div>
+                        </div>
+                        
+                        <div class="calculation-hours">
+                            <input type="number" class="hours-input" value="{{.Hours}}" min="1" max="24" step="1">
+                            <div class="hours-unit">ч</div>
+                        </div>
+                        
+                        <div class="calculation-daily">
+                            <div class="daily-value">{{printf "%.3f" (multiply (multiply .Camera.Power (float64 .Quantity)) (float64 .Hours) | divide 1000)}}</div>
+                            <div class="daily-unit">кВт·ч</div>
+                        </div>
+                        
+                        <div class="calculation-cost">
+                            <div class="cost-value">{{printf "%.0f" (multiply (multiply (multiply .Camera.Power (float64 .Quantity)) (float64 .Hours) | divide 1000) 30 | multiply $.order.Tariff)}}</div>
+                            <div class="cost-unit">руб</div>
+                        </div>
+                    </div>
                     {{end}}
                 </div>
 
+                <!-- Кнопка удаления расчета -->
+                <div class="calculation-actions">
+                    <button class="delete-calculation-btn">Удалить расчёт</button>
+                </div>
             </div>
         </div>
     </main>
+
+
+    <script>
+        // Обновление расчетов при изменении количества, часов потребления и тарифа
+        document.addEventListener('DOMContentLoaded', function() {
+            const powerValues = document.querySelectorAll('.power-value');
+            const quantityInputs = document.querySelectorAll('.quantity-input');
+            const hoursInputs = document.querySelectorAll('.hours-input');
+            const dailyValues = document.querySelectorAll('.daily-value');
+            const costValues = document.querySelectorAll('.cost-value');
+            const tariffInput = document.getElementById('tariffInput');
+            
+            // Пересчет суточного потребления и стоимости
+            function updateCalculations() {
+                const tariff = parseFloat(tariffInput.value) || 5.2; // руб/кВт·ч
+                
+                powerValues.forEach((powerElement, index) => {
+                    const power = parseFloat(powerElement.textContent) || 0;
+                    const quantity = parseFloat(quantityInputs[index].value) || 1;
+                    const hours = parseFloat(hoursInputs[index].value) || 24;
+                    const totalPower = power * quantity; // Общая мощность всех камер
+                    const dailyConsumption = (totalPower * hours) / 1000; // кВт·ч
+                    const monthlyCost = dailyConsumption * 30 * tariff; // руб
+                    
+                    if (dailyValues[index]) {
+                        dailyValues[index].textContent = dailyConsumption.toFixed(3);
+                    }
+                    if (costValues[index]) {
+                        costValues[index].textContent = Math.round(monthlyCost);
+                    }
+                });
+            }
+            
+            // Добавляем обработчики событий для всех полей количества
+            quantityInputs.forEach((quantityInput, index) => {
+                quantityInput.addEventListener('input', updateCalculations);
+                quantityInput.addEventListener('change', updateCalculations);
+            });
+            
+            // Добавляем обработчики событий для всех полей часов
+            hoursInputs.forEach((hoursInput, index) => {
+                hoursInput.addEventListener('input', updateCalculations);
+                hoursInput.addEventListener('change', updateCalculations);
+            });
+            
+            // Добавляем обработчик для изменения тарифа
+            if (tariffInput) {
+                tariffInput.addEventListener('input', updateCalculations);
+                tariffInput.addEventListener('change', updateCalculations);
+            }
+            
+            // Инициализация расчетов
+            updateCalculations();
+        });
+    </script>
 </body>
 </html>
