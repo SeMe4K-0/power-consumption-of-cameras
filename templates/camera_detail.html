@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.camera.Name}} - Системы видеонаблюдения</title>
+    <title>{{.service.Name}} - Камеры видеонаблюдения</title>
     <link rel="stylesheet" href="/static/styles/main.css?v=5">
 </head>
 <body>
@@ -11,7 +11,7 @@
         <div class="container">
             <div class="header-content">
                 <a href="/cameras" class="home-link">
-                    <img src="/static/img/logo.png" alt="HiQ" class="img-responsive">
+                    <img src="/static/img/logo.png" alt="EnergyCam" class="img-responsive">
                 </a>
             </div>
         </div>
@@ -23,7 +23,7 @@
                 <div class="search-form">
                     <form action="/cameras" method="GET">
                         <div class="search_form">
-                            <input type="text" name="search" placeholder="Поиск по камерам">
+                            <input type="text" name="camerasearch" placeholder="Поиск камер">
                             <button type="submit">
                                 🔍
                             </button>
@@ -32,8 +32,8 @@
                 </div>
                 
                 <div class="cart-badge">
-                    <a href="/electricity-calculation/1" class="order-link">
-                        📱 <span class="badge-count">{{.ordersCount}}</span>
+                    <a href="/electricity-calculation/{{.firstOrderID}}" class="order-link">
+                        📱 <span class="badge-count">{{if .servicesCount}}{{.servicesCount}}{{else}}0{{end}}</span>
                     </a>
                 </div>
             </div>
@@ -46,8 +46,8 @@
             <div class="product-info">
                 <div class="left-column">
                     <div class="image-container">
-                        <img src="{{imageURL .camera.ImageKey}}" 
-                             alt="{{.camera.Name}}" 
+                        <img src="{{imageURL .service.ImageURL}}" 
+                             alt="{{.service.Name}}" 
                              class="product-image"
                              onerror="this.src='/static/img/placeholder.jpg'">
                     </div>
@@ -55,27 +55,31 @@
 
                 <div class="right-column">
                     <div class="product-details">
-                        <h1 class="product-title">{{.camera.Name}}</h1>
-                        
+                        <h1 class="product-title">{{.service.Name}}</h1>
                         
                         <div class="product-specs">
                             <div class="spec-item">
                                 <span class="spec-label">Тип:</span>
-                                <span class="spec-value">{{.camera.Type}}</span>
+                                <span class="spec-value">{{translateType .service.Type}}</span>
                             </div>
                             <div class="spec-item">
                                 <span class="spec-label">Разрешение:</span>
-                                <span class="spec-value">{{.camera.Resolution}}</span>
+                                <span class="spec-value">{{.service.Resolution}}</span>
                             </div>
                             <div class="spec-item">
                                 <span class="spec-label">Мощность:</span>
-                                <span class="spec-value">{{.camera.Power}} Вт</span>
+                                <span class="spec-value">{{.service.Power}} Вт</span>
                             </div>
                             <div class="spec-item">
                                 <span class="spec-label">Ночное видение:</span>
-                                <span class="spec-value">{{if .camera.NightVision}}Да{{else}}Нет{{end}}</span>
+                                <span class="spec-value">{{if .service.NightVision}}Да{{else}}Нет{{end}}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Цена:</span>
+                                <span class="spec-value">{{.service.Price}} ₽</span>
                             </div>
                         </div>
+
 
                     </div>
                 </div>
@@ -85,11 +89,12 @@
             <div class="product-description">
                 <h2 class="description-title">Описание</h2>
                 <div class="description-text">
-                    <p>{{.camera.Description}}</p>
+                    <p>{{translateDescription .service.Name .service.Description}}</p>
                 </div>
             </div>
 
         </div>
     </main>
+
 </body>
 </html>

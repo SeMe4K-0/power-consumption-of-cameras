@@ -1,10 +1,10 @@
 package api
 
 import (
-	"Lab1/internal/app/handler"
-	"Lab1/internal/app/repository"
+	"it-maintenance-backend/internal/app/dsn"
+	"it-maintenance-backend/internal/app/handler"
+	"it-maintenance-backend/internal/app/repository"
 	"log"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -13,16 +13,16 @@ import (
 func StartServer() {
 	log.Println("Starting server")
 
-	repo, err := repository.NewRepository()
+	postgresString := dsn.FromEnv()
+	repo, err := repository.New(postgresString)
 	if err != nil {
-		logrus.Error("ошибка инициализации репозитория: ", err)
+		logrus.Fatalf("error initializing repository: %v", err)
 	}
 
 	handlers := handler.NewHandler(repo)
 
 	r := gin.Default()
 
-	// Добавляем функции для шаблонов
 	r.SetFuncMap(map[string]interface{}{
 		"multiply": func(a, b float64) float64 {
 			return a * b
@@ -36,28 +36,36 @@ func StartServer() {
 		"float64": func(i int) float64 {
 			return float64(i)
 		},
-		"imageURL": func(key string) string {
-			if strings.HasPrefix(key, "http://") || strings.HasPrefix(key, "https://") {
-				return key
+		"translateType": func(typeStr string) string {
+			switch typeStr {
+			case "Indoor":
+				return "Внутренняя"
+			case "Outdoor":
+				return "Уличная"
+			case "Equipment":
+				return "Оборудование"
+			default:
+				return typeStr
 			}
-			return "/static/img/cameras/" + key
 		},
 	})
 
-	// Статические файлы
 	r.Static("/static", "./resources")
 	r.LoadHTMLGlob("./templates/*")
 
-	// Три Get запроса
-	r.GET("/cameras", handlers.GetCameras)
-	r.GET("/camera/:id", handlers.GetCameraDetail)
-	r.GET("/electricity-calculation/:id", handlers.GetOrderDetail)
+	r.GET("/cameras", handlers.GetServices)
+	r.GET("/camera/:id", handlers.GetServiceDetail)
+	r.GET("/electricity-calculation/:id", handlers.GetCurrentOrder)
+	r.POST("/order/add-service", handlers.AddServiceToOrder)
+	r.POST("/order/delete/:id", handlers.DeleteOrder)
 
 	log.Println("Сервер запущен на http://localhost:8080")
 	log.Println("Доступные страницы:")
 	log.Println("  GET /cameras - Список камер")
 	log.Println("  GET /camera/:id - Детали камеры")
 	log.Println("  GET /electricity-calculation/:id - Детали заявки")
+	log.Println("  POST /order/add-service - Добавить услугу в заявку")
+	log.Println("  POST /order/delete/:id - Удалить заявку")
 
 	r.Run()
 	log.Println("Server down")

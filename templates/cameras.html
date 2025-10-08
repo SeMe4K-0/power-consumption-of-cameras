@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -23,7 +23,7 @@
                 <div class="search-form">
                     <form action="/cameras" method="GET">
                         <div class="search_form">
-                            <input type="text" name="cameras" placeholder="Камеры" 
+                            <input type="text" name="camerasearch" placeholder="Поиск камер" 
                                    value="{{.searchQuery}}">
                             <button type="submit">
                                 🔍
@@ -32,10 +32,10 @@
                     </form>
                 </div>
                 
-                <div class="cart-badge">
-                    <a href="/electricity-calculation/1" class="order-link">
-                        📱 <span class="badge-count">{{.ordersCount}}</span>
-                    </a>
+                <div class="cart-badge inactive">
+                    <span class="order-link disabled">
+                        📱 <span class="badge-count">0</span>
+                    </span>
                 </div>
             </div>
         </div>
@@ -45,21 +45,19 @@
         <div class="container">
             <h1 class="text-center mb-20">Камеры видеонаблюдения</h1>
 
-
             <div class="cameras-grid">
                 {{range .cameras}}
                 <div class="camera-card">
                     <a href="/camera/{{.ID}}" class="camera-link">
-                        <img src="{{imageURL .ImageKey}}" 
+                        <img src="{{imageURL .ImageURL}}" 
                              alt="{{.Name}}" 
                              class="camera-image img-responsive"
                              onerror="this.src='/static/img/placeholder.jpg'">
                         
                         <h3 class="camera-name">{{.Name}}</h3>
                         
-                        
                         <div class="camera-specs">
-                            <div>{{.Type}}</div>
+                            <div>{{translateType .Type}}</div>
                             <div>{{.Resolution}}</div>
                             <div>{{.Power}} Вт</div>
                             {{if .NightVision}}<div>Ночное видение</div>{{end}}

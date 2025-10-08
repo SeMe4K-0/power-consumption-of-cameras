@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ошибка доступа - EnergyCam</title>
+    <link rel="stylesheet" href="/static/styles/main.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/cameras" class="home-link">
+                    <img src="/static/img/logo.png" alt="EnergyCam" class="img-responsive">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="error-page">
+            <div class="error-content">
+                <h1 class="error-title">{{.error}}</h1>
+                <p class="error-message">{{.message}}</p>
+                <div class="error-actions">
+                    <a href="/cameras" class="btn primary">Вернуться к камерам</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <style>
+        .error-page {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60vh;
+            text-align: center;
+        }
+        
+        .error-content {
+            max-width: 500px;
+            padding: 40px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .error-title {
+            color: #b40a05;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        
+        .error-message {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .error-actions {
+            margin-top: 30px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #b40a05;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: #d32f2f;
+            color: #fff;
+            text-decoration: none;
+        }
+        
+        .btn.primary {
+            background: #b40a05;
+        }
+        
+        .btn.primary:hover {
+            background: #d32f2f;
+        }
+    </style>
+</body>
+</html>
