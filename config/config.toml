@@ -1,0 +1,9 @@
+ServiceHost = "0.0.0.0"
+ServicePort = 8080
+
+[MinIO]
+Endpoint = "localhost:9000"
+AccessKeyID = "minioadmin"
+SecretAccessKey = "minioadmin"
+UseSSL = false
+BucketName = "particles"
