@@ -40,7 +40,7 @@ func (h *Handler) RegisterAPI(router *gin.Engine) {
 			cameras.POST("/:id/addCamera", h.AddCameraToRequestCamerasCalculationAPI)
 		}
 
-		requests := api.Group("/requestcamerascalculations")
+		requests := api.Group("/request_cameras_calculations")
 		{
 			requests.GET("/cart", h.DraftRequestCamerasCalculationInfoAPI)
 			requests.GET("", h.GetRequestCamerasCalculationsAPI)
@@ -51,7 +51,7 @@ func (h *Handler) RegisterAPI(router *gin.Engine) {
 			requests.PUT("/:id/complete", h.CompleteRequestCamerasCalculationAPI)
 		}
 
-		calculations := api.Group("/camerascalculations")
+		calculations := api.Group("/cameras_calculations")
 		{
 			calculations.PUT("/:id/camera/:cameraId", h.UpdateCalculationSpeedAPI)
 			calculations.DELETE("/:id/camera/:cameraId", h.RemoveCameraFromRequestCamerasCalculationAPI)

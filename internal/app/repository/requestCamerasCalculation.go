@@ -230,3 +230,11 @@ func (r *Repository) CreateRequestCamerasCalculationWithCamera(cameraID uint, po
 
 	return requestCamerasCalculation, nil
 }
+
+func (r *Repository) GetResultsCountForRequest(requestID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&ds.CamerasCalculation{}).
+		Where("request_cameras_calculation_id = ? AND monthly_cost IS NOT NULL", requestID).
+		Count(&count).Error
+	return count, err
+}

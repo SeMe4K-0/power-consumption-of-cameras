@@ -40,13 +40,29 @@ func (h *Handler) GetRequestCamerasCalculationsAPI(ctx *gin.Context) {
 
 	var simplifiedRequests []gin.H
 	for _, req := range requests {
+		// Получаем количество результатов (камер с рассчитанным monthly_cost)
+		resultsCount, _ := h.Repository.GetResultsCountForRequest(req.ID)
+
+		// Формируем логины пользователей
+		creatorLogin := ""
+		if req.Creator.Username != "" {
+			creatorLogin = req.Creator.Username
+		}
+		moderatorLogin := ""
+		if req.Moderator != nil && req.Moderator.Username != "" {
+			moderatorLogin = req.Moderator.Username
+		}
+
 		simplifiedRequests = append(simplifiedRequests, gin.H{
-			"id":           req.ID,
-			"project_name": req.ProjectName,
-			"status":       req.Status,
-			"created_at":   req.CreatedAt,
-			"formed_at":    req.FormedAt,
-			"completed_at": req.CompletedAt,
+			"id":            req.ID,
+			"project_name":  req.ProjectName,
+			"status":        req.Status,
+			"created_at":    req.CreatedAt,
+			"formed_at":     req.FormedAt,
+			"completed_at":  req.CompletedAt,
+			"creator":       creatorLogin,
+			"moderator":     moderatorLogin,
+			"results_count": resultsCount,
 		})
 	}
 
@@ -84,6 +100,16 @@ func (h *Handler) GetRequestCamerasCalculationAPI(ctx *gin.Context) {
 		})
 	}
 
+	// Формируем информацию о пользователях
+	creatorLogin := ""
+	if request.Creator.Username != "" {
+		creatorLogin = request.Creator.Username
+	}
+	moderatorLogin := ""
+	if request.Moderator != nil && request.Moderator.Username != "" {
+		moderatorLogin = request.Moderator.Username
+	}
+
 	ctx.JSON(http.StatusOK, gin.H{
 		"id":           request.ID,
 		"project_name": request.ProjectName,
@@ -91,6 +117,8 @@ func (h *Handler) GetRequestCamerasCalculationAPI(ctx *gin.Context) {
 		"created_at":   request.CreatedAt,
 		"formed_at":    request.FormedAt,
 		"completed_at": request.CompletedAt,
+		"creator":      creatorLogin,
+		"moderator":    moderatorLogin,
 		"calculations": simplifiedCalcs,
 	})
 }
