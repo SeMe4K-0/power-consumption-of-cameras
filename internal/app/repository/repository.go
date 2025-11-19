@@ -18,12 +18,12 @@ type Repository struct {
 }
 
 func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName string, useSSL bool) (*Repository, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{}) // подключаемся к БД
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
 
-	// Выполняем миграции GORM
+
 	err = db.AutoMigrate(
 		&ds.User{},
 		&ds.Cameras{},
@@ -34,7 +34,7 @@ func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName s
 		return nil, err
 	}
 
-	// Инициализируем MinIO клиент
+
 	minioClient, err := minio.New(minioEndpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
 		Secure: useSSL,
@@ -43,7 +43,7 @@ func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName s
 		return nil, err
 	}
 
-	// Проверяем существование bucket и создаем если нужно
+
 	ctx := context.Background()
 	exists, err := minioClient.BucketExists(ctx, bucketName)
 	if err != nil {
@@ -56,7 +56,7 @@ func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName s
 		}
 	}
 
-	// Возвращаем объект Repository с подключенной базой данных и MinIO клиентом
+
 	return &Repository{
 		db:     db,
 		minio:  minioClient,

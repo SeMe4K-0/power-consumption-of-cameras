@@ -11,19 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetRequestCamerasCalculationsAPI godoc
-// @Summary Получение списка заявок
-// @Description Возвращает список заявок пользователя с фильтрацией по статусу и дате
-// @Tags RequestCamerasCalculations
-// @Produce json
-// @Security BearerAuth
-// @Param status query string false "Статус заявки"
-// @Param start_date query string false "Начальная дата (формат: 2006-01-02)"
-// @Param end_date query string false "Конечная дата (формат: 2006-01-02)"
-// @Success 200 {array} object "Список заявок"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 500 {object} errorResponse "Внутренняя ошибка сервера"
-// @Router /request_cameras_calculations [get]
 func (h *Handler) GetRequestCamerasCalculationsAPI(ctx *gin.Context) {
 	var status *ds.RequestStatus
 	var startDate, endDate *time.Time
@@ -45,7 +32,21 @@ func (h *Handler) GetRequestCamerasCalculationsAPI(ctx *gin.Context) {
 		}
 	}
 
-	requests, err := h.Repository.GetRequestCamerasCalculations(status, startDate, endDate)
+	userID, userExists := ctx.Get("user_id")
+	isProfessor, isProfessorExists := ctx.Get("is_professor")
+
+	var userIDPtr *uint
+	var isProfessorBool bool
+
+	if userExists {
+		uid := userID.(uint)
+		userIDPtr = &uid
+	}
+	if isProfessorExists {
+		isProfessorBool = isProfessor.(bool)
+	}
+
+	requests, err := h.Repository.GetRequestCamerasCalculations(status, startDate, endDate, userIDPtr, isProfessorBool)
 	if err != nil {
 		h.errorHandler(ctx, http.StatusInternalServerError, err)
 		return
@@ -53,10 +54,8 @@ func (h *Handler) GetRequestCamerasCalculationsAPI(ctx *gin.Context) {
 
 	var simplifiedRequests []gin.H
 	for _, req := range requests {
-		// Получаем количество результатов (камер с рассчитанным monthly_cost)
 		resultsCount, _ := h.Repository.GetResultsCountForRequest(req.ID)
 
-		// Формируем логины пользователей
 		creatorLogin := ""
 		if req.Creator.Username != "" {
 			creatorLogin = req.Creator.Username
@@ -82,19 +81,6 @@ func (h *Handler) GetRequestCamerasCalculationsAPI(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, simplifiedRequests)
 }
 
-// GetRequestCamerasCalculationAPI godoc
-// @Summary Получение заявки по ID
-// @Description Возвращает детальную информацию о заявке с расчетами
-// @Tags RequestCamerasCalculations
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Success 200 {object} object "Детальная информация о заявке"
-// @Failure 400 {object} errorResponse "Неверный формат ID"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 404 {object} errorResponse "Заявка не найдена"
-// @Failure 500 {object} errorResponse "Внутренняя ошибка сервера"
-// @Router /request_cameras_calculations/{id} [get]
 func (h *Handler) GetRequestCamerasCalculationAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -126,7 +112,6 @@ func (h *Handler) GetRequestCamerasCalculationAPI(ctx *gin.Context) {
 		})
 	}
 
-	// Формируем информацию о пользователях
 	creatorLogin := ""
 	if request.Creator.Username != "" {
 		creatorLogin = request.Creator.Username
@@ -149,21 +134,6 @@ func (h *Handler) GetRequestCamerasCalculationAPI(ctx *gin.Context) {
 	})
 }
 
-// UpdateRequestCamerasCalculationAPI godoc
-// @Summary Обновление заявки
-// @Description Обновляет информацию о заявке (только для создателя)
-// @Tags RequestCamerasCalculations
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Param request body ds.RequestCamerasCalculation true "Данные для обновления"
-// @Success 200 {object} object{status=string,message=string} "Заявка обновлена"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 404 {object} errorResponse "Заявка не найдена"
-// @Failure 500 {object} errorResponse "Внутренняя ошибка сервера"
-// @Router /request_cameras_calculations/{id} [put]
 func (h *Handler) UpdateRequestCamerasCalculationAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -175,6 +145,27 @@ func (h *Handler) UpdateRequestCamerasCalculationAPI(ctx *gin.Context) {
 	var request ds.RequestCamerasCalculation
 	if err := ctx.ShouldBindJSON(&request); err != nil {
 		h.errorHandler(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	existingRequest, err := h.Repository.GetRequestCamerasCalculation(uint(id))
+	if err != nil {
+		if err.Error() == "record not found" {
+			h.errorHandler(ctx, http.StatusNotFound, err)
+		} else {
+			h.errorHandler(ctx, http.StatusInternalServerError, err)
+		}
+		return
+	}
+
+	userID, exists := ctx.Get("user_id")
+	if !exists || existingRequest.CreatorID != userID.(uint) {
+		h.errorHandler(ctx, http.StatusForbidden, fmt.Errorf("доступ запрещен: вы можете обновлять только свои заявки"))
+		return
+	}
+
+	if request.Status == ds.RequestStatusCompleted || request.Status == ds.RequestStatusRejected {
+		h.errorHandler(ctx, http.StatusForbidden, fmt.Errorf("доступ запрещен: создатель не может завершать заявки"))
 		return
 	}
 
@@ -194,19 +185,6 @@ func (h *Handler) UpdateRequestCamerasCalculationAPI(ctx *gin.Context) {
 	})
 }
 
-// DeleteRequestCamerasCalculationAPI godoc
-// @Summary Удаление заявки
-// @Description Удаляет заявку из системы (только для создателя)
-// @Tags RequestCamerasCalculations
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Success 200 {object} object{status=string,message=string} "Заявка удалена"
-// @Failure 400 {object} errorResponse "Неверный формат ID"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 404 {object} errorResponse "Заявка не найдена"
-// @Failure 500 {object} errorResponse "Внутренняя ошибка сервера"
-// @Router /request_cameras_calculations/{id} [delete]
 func (h *Handler) DeleteRequestCamerasCalculationAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -236,20 +214,6 @@ func (h *Handler) DeleteRequestCamerasCalculationAPI(ctx *gin.Context) {
 	})
 }
 
-// UpdateRequestStatusAPI godoc
-// @Summary Обновление статуса заявки
-// @Description Обновляет статус заявки
-// @Tags RequestCamerasCalculations
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Param request body object{status=string,moderator_id=int} true "Новый статус и ID модератора"
-// @Success 200 {object} object{status=string,message=string} "Статус заявки обновлен"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 404 {object} errorResponse "Заявка не найдена"
-// @Router /request_cameras_calculations/{id}/status [put]
 func (h *Handler) UpdateRequestStatusAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -284,17 +248,10 @@ func (h *Handler) UpdateRequestStatusAPI(ctx *gin.Context) {
 	})
 }
 
-// DraftRequestCamerasCalculationInfoAPI godoc
-// @Summary Информация о черновике заявки
-// @Description Возвращает информацию о текущем черновике заявки пользователя
-// @Tags RequestCamerasCalculations
-// @Produce json
-// @Success 200 {object} object{draft_id=int,cameras_cnt=int} "Информация о черновике"
-// @Router /request_cameras_calculations/cart [get]
 func (h *Handler) DraftRequestCamerasCalculationInfoAPI(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
-		userID = uint(1) // Для гостя используем ID 1
+		userID = uint(1)
 	}
 
 	draft, calcs, err := h.Repository.GetDraftRequestCamerasCalculationInfo(userID.(uint))
@@ -311,17 +268,6 @@ func (h *Handler) DraftRequestCamerasCalculationInfoAPI(ctx *gin.Context) {
 	})
 }
 
-// FormRequestCamerasCalculationAPI godoc
-// @Summary Формирование заявки
-// @Description Переводит черновик заявки в статус "сформирован"
-// @Tags RequestCamerasCalculations
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Success 200 {object} object{status=string,message=string} "Заявка сформирована"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Router /request_cameras_calculations/{id}/form [put]
 func (h *Handler) FormRequestCamerasCalculationAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -346,19 +292,6 @@ func (h *Handler) FormRequestCamerasCalculationAPI(ctx *gin.Context) {
 	})
 }
 
-// CompleteRequestCamerasCalculationAPI godoc
-// @Summary Завершение заявки модератором
-// @Description Завершает или отклоняет заявку (требует права модератора)
-// @Tags RequestCamerasCalculations
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Param request body object{approve=boolean} false "Одобрить заявку (по умолчанию true)"
-// @Success 200 {object} object{status=string,message=string} "Заявка обработана"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 403 {object} errorResponse "Доступ запрещен (требуется модератор)"
-// @Router /request_cameras_calculations/{id}/complete [put]
 func (h *Handler) CompleteRequestCamerasCalculationAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -371,12 +304,17 @@ func (h *Handler) CompleteRequestCamerasCalculationAPI(ctx *gin.Context) {
 		Approve bool `json:"approve"`
 	}
 
-	// Если JSON не предоставлен, используем значение по умолчанию
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		req.Approve = true // По умолчанию одобряем заявку
+		req.Approve = true
 	}
 
-	if err := h.Repository.CompleteRequest(uint(id), req.Approve); err != nil {
+	userID, exists := ctx.Get("user_id")
+	if !exists {
+		h.errorHandler(ctx, http.StatusUnauthorized, fmt.Errorf("user not authenticated"))
+		return
+	}
+
+	if err := h.Repository.CompleteRequest(uint(id), req.Approve, userID.(uint)); err != nil {
 		h.errorHandler(ctx, http.StatusBadRequest, err)
 		return
 	}

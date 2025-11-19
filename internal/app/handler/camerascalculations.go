@@ -8,22 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
-
-// UpdateCalculationSpeedAPI godoc
-// @Summary Обновление мощности камеры в расчете
-// @Description Обновляет мощность камеры в черновике заявки
-// @Tags CamerasCalculations
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Param cameraId path int true "ID камеры"
-// @Param request body object{power=number} true "Новая мощность"
-// @Success 200 {object} object{status=string,message=string} "Мощность обновлена"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 404 {object} errorResponse "Заявка не найдена"
-// @Router /cameras_calculations/{id}/camera/{cameraId} [put]
 func (h *Handler) UpdateCalculationSpeedAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	cameraIdStr := ctx.Param("cameraId")
@@ -66,21 +50,6 @@ func (h *Handler) UpdateCalculationSpeedAPI(ctx *gin.Context) {
 		"message": "Мощность обновлена",
 	})
 }
-
-// RemoveCameraFromRequestCamerasCalculationAPI godoc
-// @Summary Удаление камеры из заявки
-// @Description Удаляет камеру из черновика заявки
-// @Tags CamerasCalculations
-// @Produce json
-// @Security BearerAuth
-// @Param id path int true "ID заявки"
-// @Param cameraId path int true "ID камеры"
-// @Success 200 {object} object{status=string,message=string} "Камера удалена из заявки"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 403 {object} errorResponse "Доступ запрещен"
-// @Failure 404 {object} errorResponse "Камера не найдена в заявке"
-// @Failure 500 {object} errorResponse "Внутренняя ошибка сервера"
-// @Router /cameras_calculations/{id}/camera/{cameraId} [delete]
 func (h *Handler) RemoveCameraFromRequestCamerasCalculationAPI(ctx *gin.Context) {
 	idStr := ctx.Param("id")
 	cameraIdStr := ctx.Param("cameraId")

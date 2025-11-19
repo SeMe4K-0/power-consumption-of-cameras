@@ -15,13 +15,11 @@ const jwtPrefix = "Bearer "
 
 func (a *Application) WithAuthCheck(requireModerator bool) func(ctx *gin.Context) {
 	return func(gCtx *gin.Context) {
-		// Пытаемся получить JWT из Authorization header
 		jwtStr := gCtx.GetHeader("Authorization")
 
 		if strings.HasPrefix(jwtStr, jwtPrefix) {
 			jwtStr = jwtStr[len(jwtPrefix):]
 		} else {
-			// Если нет в header, пытаемся получить из Cookie
 			cookieToken, err := gCtx.Cookie("jwt_token")
 			if err != nil || cookieToken == "" {
 				gCtx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
@@ -72,16 +70,14 @@ func (a *Application) WithAuthCheck(requireModerator bool) func(ctx *gin.Context
 
 func (a *Application) WithOptionalAuthCheck() func(ctx *gin.Context) {
 	return func(gCtx *gin.Context) {
-		// Пытаемся получить JWT из Authorization header
 		jwtStr := gCtx.GetHeader("Authorization")
 
 		if strings.HasPrefix(jwtStr, jwtPrefix) {
 			jwtStr = jwtStr[len(jwtPrefix):]
 		} else {
-			// Если нет в header, пытаемся получить из Cookie
 			cookieToken, err := gCtx.Cookie("jwt_token")
 			if err != nil || cookieToken == "" {
-				return // Опциональная авторизация, просто выходим
+				return
 			}
 			jwtStr = cookieToken
 		}

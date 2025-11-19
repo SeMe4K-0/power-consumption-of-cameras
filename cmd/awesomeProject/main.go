@@ -13,22 +13,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// @title Cameras Calculation API
-// @version 1.0
-// @description API для расчета камер видеонаблюдения
-
-// @host 127.0.0.1:8080
-// @schemes http https
-// @BasePath /api
-
-// @securityDefinitions.apikey BearerAuth
-// @in header
-// @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
-
 func main() {
 	router := gin.Default()
-	router.MaxMultipartMemory = 8 << 20 // 8 MB
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Content-Length, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+	router.MaxMultipartMemory = 8 << 20
 
 	conf, err := config.NewConfig()
 	if err != nil {

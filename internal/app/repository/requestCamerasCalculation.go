@@ -9,9 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func (r *Repository) GetRequestCamerasCalculations(status *ds.RequestStatus, startDate, endDate *time.Time) ([]ds.RequestCamerasCalculation, error) {
+func (r *Repository) GetRequestCamerasCalculations(status *ds.RequestStatus, startDate, endDate *time.Time, userID *uint, isProfessor bool) ([]ds.RequestCamerasCalculation, error) {
 	var requests []ds.RequestCamerasCalculation
 	query := r.db.Where("status != ? AND status != ?", ds.RequestStatusDeleted, ds.RequestStatusDraft)
+
+	if !isProfessor && userID != nil {
+		query = query.Where("creator_id = ?", *userID)
+	}
 
 	if status != nil {
 		query = query.Where("status = ?", *status)
@@ -123,7 +127,6 @@ func (r *Repository) GetDraftRequestCamerasCalculationInfo(userID uint) (ds.Requ
 }
 
 func (r *Repository) calculateMonthlyCost(power float64) float64 {
-	// Расчет месячной стоимости: мощность (Вт) * 24 часа * 30 дней * 5 руб/кВтч / 1000
 	return (power * 24 * 30 * 5.0) / 1000
 }
 
@@ -188,14 +191,13 @@ func (r *Repository) FormDraft(id uint, userID uint) error {
 	return r.UpdateRequestStatus(id, newStatus, nil)
 }
 
-func (r *Repository) CompleteRequest(id uint, approve bool) error {
+func (r *Repository) CompleteRequest(id uint, approve bool, moderatorID uint) error {
 	status := ds.RequestStatusRejected
 	if approve {
 		status = ds.RequestStatusCompleted
 	}
-	mod := ds.GetCreatorID()
 
-	err := r.UpdateRequestStatus(id, status, &mod)
+	err := r.UpdateRequestStatus(id, status, &moderatorID)
 	if err != nil {
 		return err
 	}

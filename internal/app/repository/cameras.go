@@ -74,13 +74,13 @@ func (r *Repository) UpdateCameraImage(id uint, imagePath string) error {
 }
 
 func (r *Repository) UploadFileToMinIO(ctx context.Context, fileName string, fileReader io.Reader, fileSize int64, contentType string) error {
-	// Проверяем доступность MinIO
+
 	_, err := r.minio.ListBuckets(ctx)
 	if err != nil {
 		return fmt.Errorf("MinIO is not accessible: %v", err)
 	}
 
-	// Загружаем файл
+
 	_, err = r.minio.PutObject(ctx, r.bucket, fileName, fileReader, fileSize, minio.PutObjectOptions{
 		ContentType: contentType,
 	})

@@ -38,16 +38,6 @@ type successResponse struct {
 	Message string `json:"message"`
 }
 
-// Register godoc
-// @Summary Регистрация нового пользователя
-// @Description Создание нового пользователя в системе
-// @Tags Profile
-// @Accept json
-// @Produce json
-// @Param request body registerReq true "Данные для регистрации"
-// @Success 201 {object} ds.User "Успешная регистрация"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Router /profile/register [post]
 func (h *Handler) Register(gCtx *gin.Context) {
 	var user ds.User
 	if err := gCtx.ShouldBindJSON(&user); err != nil {
@@ -62,17 +52,6 @@ func (h *Handler) Register(gCtx *gin.Context) {
 	gCtx.JSON(http.StatusCreated, createdUser)
 }
 
-// Login godoc
-// @Summary Авторизация пользователя
-// @Description Авторизация пользователя по username и паролю
-// @Tags Profile
-// @Accept json
-// @Produce json
-// @Param request body loginReq true "Данные для входа"
-// @Success 200 {object} loginResp "Успешная авторизация"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 401 {object} errorResponse "Неверный username или пароль"
-// @Router /profile/login [post]
 func (h *Handler) Login(gCtx *gin.Context) {
 	cfg := h.Config
 	req := &loginReq{}
@@ -114,15 +93,14 @@ func (h *Handler) Login(gCtx *gin.Context) {
 			return
 		}
 
-		// Устанавливаем JWT в Cookie
 		gCtx.SetCookie(
-			"jwt_token",                      // имя cookie
-			strToken,                         // значение
-			int(cfg.JWT.ExpiresIn.Seconds()), // maxAge в секундах
-			"/",                              // path
-			"",                               // domain
-			false,                            // secure (false для http)
-			true,                             // httpOnly
+			"jwt_token",
+			strToken,
+			int(cfg.JWT.ExpiresIn.Seconds()),
+			"/",
+			"",
+			false,
+			true,
 		)
 
 		gCtx.JSON(http.StatusOK, loginResp{
@@ -139,26 +117,13 @@ func (h *Handler) Login(gCtx *gin.Context) {
 	})
 }
 
-// Logout godoc
-// @Summary Выход пользователя из системы
-// @Description Добавление токена в черный список для выхода из системы
-// @Tags Profile
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} successResponse "Успешный выход"
-// @Failure 400 {object} errorResponse "Отсутствует или неверный заголовок авторизации"
-// @Failure 500 {object} errorResponse "Ошибка при выходе"
-// @Router /profile/logout [post]
 func (h *Handler) Logout(gCtx *gin.Context) {
 	var token string
 
-	// Пытаемся получить из Authorization header
 	authHeader := gCtx.GetHeader("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
 		token = strings.TrimPrefix(authHeader, "Bearer ")
 	} else {
-		// Если нет в header, пытаемся получить из Cookie
 		cookieToken, err := gCtx.Cookie("jwt_token")
 		if err != nil || cookieToken == "" {
 			gCtx.JSON(http.StatusBadRequest, gin.H{
@@ -180,15 +145,14 @@ func (h *Handler) Logout(gCtx *gin.Context) {
 		return
 	}
 
-	// Удаляем Cookie
 	gCtx.SetCookie(
-		"jwt_token", // имя cookie
-		"",          // пустое значение
-		-1,          // maxAge = -1 (удаляет cookie)
-		"/",         // path
-		"",          // domain
-		false,       // secure
-		true,        // httpOnly
+		"jwt_token",
+		"",
+		-1,
+		"/",
+		"",
+		false,
+		true,
 	)
 
 	gCtx.JSON(http.StatusOK, gin.H{
@@ -196,16 +160,6 @@ func (h *Handler) Logout(gCtx *gin.Context) {
 	})
 }
 
-// GetMeAPI godoc
-// @Summary Получить информацию о текущем пользователе
-// @Description Возвращает информацию о залогиненном пользователе
-// @Tags Profile
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} ds.User "Информация о пользователе"
-// @Failure 401 {object} errorResponse "Пользователь не авторизован"
-// @Failure 404 {object} errorResponse "Пользователь не найден"
-// @Router /profile/me [get]
 func (h *Handler) GetMeAPI(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {
@@ -221,18 +175,6 @@ func (h *Handler) GetMeAPI(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, user)
 }
 
-// UpdateMeAPI godoc
-// @Summary Обновить информацию о текущем пользователе
-// @Description Обновляет информацию о залогиненном пользователе
-// @Tags Profile
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body ds.User true "Данные для обновления"
-// @Success 200 {object} ds.User "Обновленная информация о пользователе"
-// @Failure 400 {object} errorResponse "Неверный формат запроса"
-// @Failure 401 {object} errorResponse "Пользователь не авторизован"
-// @Router /profile/me [put]
 func (h *Handler) UpdateMeAPI(ctx *gin.Context) {
 	userID, exists := ctx.Get("user_id")
 	if !exists {

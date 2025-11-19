@@ -10,7 +10,6 @@ import (
 )
 
 func main() {
-	// Загружаем переменные окружения из app.env
 	_ = godotenv.Load("app.env")
 	db, err := gorm.Open(postgres.Open(dsn.FromEnv()), &gorm.Config{})
 	if err != nil {
