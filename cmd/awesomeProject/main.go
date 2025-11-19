@@ -1,23 +1,34 @@
 package main
 
 import (
-	"fmt"
-	"log"
-
-	"it-maintenance-backend/internal/app/config"
-	"it-maintenance-backend/internal/app/dsn"
-	"it-maintenance-backend/internal/app/handler"
-	"it-maintenance-backend/internal/app/repository"
+	"awesomeProject/internal/app/config"
+	"awesomeProject/internal/app/dsn"
+	"awesomeProject/internal/app/handler"
+	"awesomeProject/internal/app/redis"
+	"awesomeProject/internal/app/repository"
+	"awesomeProject/internal/pkg"
+	"context"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 )
 
-func main() {
-	log.Println("Application start!")
+// @title Cameras Calculation API
+// @version 1.0
+// @description API для расчета камер видеонаблюдения
 
-	_ = godotenv.Load("config.env")
+// @host 127.0.0.1:8080
+// @schemes http https
+// @BasePath /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
+
+func main() {
+	router := gin.Default()
+	router.MaxMultipartMemory = 8 << 20 // 8 MB
 
 	conf, err := config.NewConfig()
 	if err != nil {
@@ -25,31 +36,33 @@ func main() {
 	}
 
 	postgresString := dsn.FromEnv()
-	fmt.Println("Connecting to database...")
-	fmt.Println(postgresString)
 
-	repo, err := repository.New(postgresString)
+	rep, errRep := repository.New(
+		postgresString,
+		conf.MinIO.Endpoint,
+		conf.MinIO.AccessKeyID,
+		conf.MinIO.SecretAccessKey,
+		conf.MinIO.BucketName,
+		conf.MinIO.UseSSL,
+	)
+	if errRep != nil {
+		logrus.Fatalf("error initializing repository: %v", errRep)
+	}
+
+	ctx := context.Background()
+	redisClient, err := redis.New(ctx, conf.Redis)
 	if err != nil {
-		logrus.Fatalf("error initializing repository: %v", err)
+		logrus.Fatalf("error initializing redis: %v", err)
 	}
 
-	handlers := handler.NewHandler(repo)
+	hand := handler.NewHandler(rep, conf, func(requireModerator bool) gin.HandlerFunc {
+		tempApp := pkg.NewApp(conf, router, nil, redisClient)
+		return tempApp.WithAuthCheck(requireModerator)
+	}, func() gin.HandlerFunc {
+		tempApp := pkg.NewApp(conf, router, nil, redisClient)
+		return tempApp.WithOptionalAuthCheck()
+	}, redisClient)
 
-	router := gin.Default()
-	handlers.RegisterHandler(router)
-
-	serverAddress := fmt.Sprintf("%s:%d", conf.ServiceHost, conf.ServicePort)
-	log.Printf("Сервер запущен на http://%s", serverAddress)
-	log.Println("Доступные страницы:")
-	log.Println("  GET /services - Список услуг")
-	log.Println("  GET /service/:id - Детали услуги")
-	log.Println("  GET /order - Текущая заявка")
-	log.Println("  POST /order/add-service - Добавить услугу в заявку")
-	log.Println("  POST /order/delete/:id - Удалить заявку")
-
-	if err := router.Run(serverAddress); err != nil {
-		logrus.Fatal(err)
-	}
-
-	log.Println("Application terminated!")
+	application := pkg.NewApp(conf, router, hand, redisClient)
+	application.RunApp()
 }

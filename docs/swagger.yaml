@@ -1,0 +1,971 @@
+basePath: /api
+definitions:
+  ds.Cameras:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      image:
+        type: string
+      name:
+        type: string
+      night_vision:
+        type: boolean
+      power:
+        type: number
+      status:
+        type: string
+    type: object
+  ds.RequestCamerasCalculation:
+    properties:
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      creator:
+        $ref: '#/definitions/ds.User'
+      creator_id:
+        type: integer
+      formed_at:
+        type: string
+      id:
+        type: integer
+      moderator:
+        $ref: '#/definitions/ds.User'
+      moderator_id:
+        type: integer
+      project_name:
+        type: string
+      status:
+        $ref: '#/definitions/ds.RequestStatus'
+    type: object
+  ds.RequestStatus:
+    enum:
+    - черновик
+    - удалён
+    - сформирован
+    - завершён
+    - отклонён
+    type: string
+    x-enum-varnames:
+    - RequestStatusDraft
+    - RequestStatusDeleted
+    - RequestStatusFormed
+    - RequestStatusCompleted
+    - RequestStatusRejected
+  ds.User:
+    properties:
+      id:
+        type: integer
+      is_professor:
+        type: boolean
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.errorResponse:
+    properties:
+      description:
+        type: string
+      status:
+        type: string
+    type: object
+  handler.loginReq:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.loginResp:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      token_type:
+        type: string
+    type: object
+  handler.registerReq:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  handler.successResponse:
+    properties:
+      message:
+        type: string
+    type: object
+host: 127.0.0.1:8080
+info:
+  contact: {}
+  description: API для расчета камер видеонаблюдения
+  title: Cameras Calculation API
+  version: "1.0"
+paths:
+  /cameras:
+    get:
+      description: Возвращает список всех камер с возможностью фильтрации по названию
+      parameters:
+      - description: Название камеры для фильтрации
+        in: query
+        name: camera
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список камер
+          schema:
+            items:
+              $ref: '#/definitions/ds.Cameras'
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Получение списка камер
+      tags:
+      - Cameras
+    post:
+      consumes:
+      - application/json
+      description: Создает новую камеру в системе (требует права модератора)
+      parameters:
+      - description: Данные камеры
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            description:
+              type: string
+            name:
+              type: string
+            night_vision:
+              type: boolean
+            power:
+              type: number
+            status:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданная камера
+          schema:
+            $ref: '#/definitions/ds.Cameras'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Создание новой камеры
+      tags:
+      - Cameras
+  /cameras/{id}:
+    delete:
+      description: Удаляет камеру из системы (требует права модератора)
+      parameters:
+      - description: ID камеры
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Камера удалена
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат ID
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Камера не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удаление камеры
+      tags:
+      - Cameras
+    get:
+      description: Возвращает информацию о камере по её ID
+      parameters:
+      - description: ID камеры
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о камере
+          schema:
+            $ref: '#/definitions/ds.Cameras'
+        "400":
+          description: Неверный формат ID
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Камера не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Получение камеры по ID
+      tags:
+      - Cameras
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о камере (требует права модератора)
+      parameters:
+      - description: ID камеры
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            description:
+              type: string
+            name:
+              type: string
+            night_vision:
+              type: boolean
+            power:
+              type: number
+            status:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Камера обновлена
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Камера не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновление камеры
+      tags:
+      - Cameras
+  /cameras/{id}/addCamera:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет камеру в черновик заявки или создает новую заявку
+      parameters:
+      - description: ID камеры
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Мощность камеры
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            power:
+              type: number
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Камера добавлена в заявку
+          schema:
+            properties:
+              draft_id:
+                type: integer
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Добавление камеры в заявку
+      tags:
+      - Cameras
+  /cameras/{id}/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает изображение для камеры в MinIO (требует права модератора)
+      parameters:
+      - description: ID камеры
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Изображение камеры
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Изображение загружено
+          schema:
+            properties:
+              image_path:
+                type: string
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Камера не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Загрузка изображения камеры
+      tags:
+      - Cameras
+  /cameras_calculations/{id}/camera/{cameraId}:
+    delete:
+      description: Удаляет камеру из черновика заявки
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID камеры
+        in: path
+        name: cameraId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Камера удалена из заявки
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Камера не найдена в заявке
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удаление камеры из заявки
+      tags:
+      - CamerasCalculations
+    put:
+      consumes:
+      - application/json
+      description: Обновляет мощность камеры в черновике заявки
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: ID камеры
+        in: path
+        name: cameraId
+        required: true
+        type: integer
+      - description: Новая мощность
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            power:
+              type: number
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Мощность обновлена
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновление мощности камеры в расчете
+      tags:
+      - CamerasCalculations
+  /profile/login:
+    post:
+      consumes:
+      - application/json
+      description: Авторизация пользователя по username и паролю
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.loginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная авторизация
+          schema:
+            $ref: '#/definitions/handler.loginResp'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Неверный username или пароль
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Авторизация пользователя
+      tags:
+      - Profile
+  /profile/logout:
+    post:
+      consumes:
+      - application/json
+      description: Добавление токена в черный список для выхода из системы
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный выход
+          schema:
+            $ref: '#/definitions/handler.successResponse'
+        "400":
+          description: Отсутствует или неверный заголовок авторизации
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Ошибка при выходе
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Выход пользователя из системы
+      tags:
+      - Profile
+  /profile/me:
+    get:
+      description: Возвращает информацию о залогиненном пользователе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о пользователе
+          schema:
+            $ref: '#/definitions/ds.User'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получить информацию о текущем пользователе
+      tags:
+      - Profile
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о залогиненном пользователе
+      parameters:
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ds.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновленная информация о пользователе
+          schema:
+            $ref: '#/definitions/ds.User'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновить информацию о текущем пользователе
+      tags:
+      - Profile
+  /profile/register:
+    post:
+      consumes:
+      - application/json
+      description: Создание нового пользователя в системе
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.registerReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Успешная регистрация
+          schema:
+            $ref: '#/definitions/ds.User'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      summary: Регистрация нового пользователя
+      tags:
+      - Profile
+  /request_cameras_calculations:
+    get:
+      description: Возвращает список заявок пользователя с фильтрацией по статусу
+        и дате
+      parameters:
+      - description: Статус заявки
+        in: query
+        name: status
+        type: string
+      - description: 'Начальная дата (формат: 2006-01-02)'
+        in: query
+        name: start_date
+        type: string
+      - description: 'Конечная дата (формат: 2006-01-02)'
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список заявок
+          schema:
+            items:
+              type: object
+            type: array
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получение списка заявок
+      tags:
+      - RequestCamerasCalculations
+  /request_cameras_calculations/{id}:
+    delete:
+      description: Удаляет заявку из системы (только для создателя)
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка удалена
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат ID
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Удаление заявки
+      tags:
+      - RequestCamerasCalculations
+    get:
+      description: Возвращает детальную информацию о заявке с расчетами
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Детальная информация о заявке
+          schema:
+            type: object
+        "400":
+          description: Неверный формат ID
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Получение заявки по ID
+      tags:
+      - RequestCamerasCalculations
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о заявке (только для создателя)
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ds.RequestCamerasCalculation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка обновлена
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновление заявки
+      tags:
+      - RequestCamerasCalculations
+  /request_cameras_calculations/{id}/complete:
+    put:
+      consumes:
+      - application/json
+      description: Завершает или отклоняет заявку (требует права модератора)
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Одобрить заявку (по умолчанию true)
+        in: body
+        name: request
+        schema:
+          properties:
+            approve:
+              type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка обработана
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен (требуется модератор)
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Завершение заявки модератором
+      tags:
+      - RequestCamerasCalculations
+  /request_cameras_calculations/{id}/form:
+    put:
+      description: Переводит черновик заявки в статус "сформирован"
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Заявка сформирована
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Формирование заявки
+      tags:
+      - RequestCamerasCalculations
+  /request_cameras_calculations/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет статус заявки
+      parameters:
+      - description: ID заявки
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новый статус и ID модератора
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            moderator_id:
+              type: integer
+            status:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статус заявки обновлен
+          schema:
+            properties:
+              message:
+                type: string
+              status:
+                type: string
+            type: object
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "403":
+          description: Доступ запрещен
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+        "404":
+          description: Заявка не найдена
+          schema:
+            $ref: '#/definitions/handler.errorResponse'
+      security:
+      - BearerAuth: []
+      summary: Обновление статуса заявки
+      tags:
+      - RequestCamerasCalculations
+  /request_cameras_calculations/cart:
+    get:
+      description: Возвращает информацию о текущем черновике заявки пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о черновике
+          schema:
+            properties:
+              cameras_cnt:
+                type: integer
+              draft_id:
+                type: integer
+            type: object
+      summary: Информация о черновике заявки
+      tags:
+      - RequestCamerasCalculations
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
