@@ -56,9 +56,9 @@ func (a *Application) WithAuthCheck(requireModerator bool) func(ctx *gin.Context
 		myClaims := token.Claims.(*ds.JWTClaims)
 
 		gCtx.Set("user_id", myClaims.UserID)
-		gCtx.Set("is_professor", myClaims.IsProfessor)
+		gCtx.Set("is_leading_engineer", myClaims.IsLeadingEngineer)
 
-		if requireModerator && !myClaims.IsProfessor {
+		if requireModerator && !myClaims.IsLeadingEngineer {
 			gCtx.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"status":      "error",
 				"description": "moderator permissions required for this operation",
@@ -98,6 +98,6 @@ func (a *Application) WithOptionalAuthCheck() func(ctx *gin.Context) {
 		myClaims := token.Claims.(*ds.JWTClaims)
 
 		gCtx.Set("user_id", myClaims.UserID)
-		gCtx.Set("is_professor", myClaims.IsProfessor)
+		gCtx.Set("is_leading_engineer", myClaims.IsLeadingEngineer)
 	}
 }

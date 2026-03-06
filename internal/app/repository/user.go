@@ -18,7 +18,10 @@ func (r *Repository) GetUserByUsername(username string) (ds.User, error) {
 
 func (r *Repository) UpdateUser(id uint, user ds.User) error {
 	updates := map[string]interface{}{"username": user.Username}
-	updates["is_professor"] = user.IsProfessor
+	updates["is_leading_engineer"] = user.IsLeadingEngineer
+	if user.Email != "" {
+		updates["email"] = user.Email
+	}
 	return r.db.Model(&ds.User{}).Where("id = ?", id).Updates(updates).Error
 }
 

@@ -9,11 +9,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func (r *Repository) GetRequestCamerasCalculations(status *ds.RequestStatus, startDate, endDate *time.Time, userID *uint, isProfessor bool) ([]ds.RequestCamerasCalculation, error) {
+func (r *Repository) GetRequestCamerasCalculations(status *ds.RequestStatus, startDate, endDate *time.Time, userID *uint, isLeadingEngineer bool) ([]ds.RequestCamerasCalculation, error) {
 	var requests []ds.RequestCamerasCalculation
 	query := r.db.Where("status != ? AND status != ?", ds.RequestStatusDeleted, ds.RequestStatusDraft)
 
-	if !isProfessor && userID != nil {
+	if !isLeadingEngineer && userID != nil {
 		query = query.Where("creator_id = ?", *userID)
 	}
 
@@ -126,25 +126,16 @@ func (r *Repository) GetDraftRequestCamerasCalculationInfo(userID uint) (ds.Requ
 	return requestCamerasCalculation, camerasCalculations, nil
 }
 
-func (r *Repository) calculateMonthlyCost(power float64) float64 {
-	return (power * 24 * 30 * 5.0) / 1000
-}
-
-func (r *Repository) calculateMonthlyCostsForRequest(requestID uint) error {
+// GetCalculationsForRequest возвращает расчёты по заявке (используется доменным сервисом).
+func (r *Repository) GetCalculationsForRequest(requestID uint) ([]ds.CamerasCalculation, error) {
 	var calculations []ds.CamerasCalculation
 	err := r.db.Preload("Cameras").Where("request_cameras_calculation_id = ?", requestID).Find(&calculations).Error
-	if err != nil {
-		return err
-	}
+	return calculations, err
+}
 
-	for _, calc := range calculations {
-		cost := r.calculateMonthlyCost(calc.Power)
-		err = r.db.Model(&ds.CamerasCalculation{}).Where("id = ?", calc.ID).Update("monthly_cost", &cost).Error
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+// UpdateCalculationMonthlyCost обновляет доменное поле monthly_cost.
+func (r *Repository) UpdateCalculationMonthlyCost(calcID uint, cost *float64) error {
+	return r.db.Model(&ds.CamerasCalculation{}).Where("id = ?", calcID).Update("monthly_cost", cost).Error
 }
 
 func (r *Repository) AddCamerasCalculationToRequest(requestID uint, cameraID uint, power float64) error {
@@ -200,13 +191,6 @@ func (r *Repository) CompleteRequest(id uint, approve bool, moderatorID uint) er
 	err := r.UpdateRequestStatus(id, status, &moderatorID)
 	if err != nil {
 		return err
-	}
-
-	if approve && status == ds.RequestStatusCompleted {
-		err = r.calculateMonthlyCostsForRequest(id)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

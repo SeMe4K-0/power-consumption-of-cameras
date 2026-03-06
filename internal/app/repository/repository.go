@@ -23,7 +23,6 @@ func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName s
 		return nil, err
 	}
 
-
 	err = db.AutoMigrate(
 		&ds.User{},
 		&ds.Cameras{},
@@ -34,6 +33,32 @@ func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName s
 		return nil, err
 	}
 
+	// Добавляем пару камер по умолчанию, если таблица пустая
+	var camerasCount int64
+	if err := db.Model(&ds.Cameras{}).Count(&camerasCount).Error; err != nil {
+		return nil, err
+	}
+	if camerasCount == 0 {
+		defaultCameras := []ds.Cameras{
+			{
+				Name:        "Уличная камера 5Мп",
+				Power:       12.0,
+				Description: strPtr("Базовая уличная камера с ночным видением"),
+				Status:      "active",
+				NightVision: true,
+			},
+			{
+				Name:        "Внутренняя камера 2Мп",
+				Power:       8.0,
+				Description: strPtr("Камера для помещений"),
+				Status:      "active",
+				NightVision: false,
+			},
+		}
+		if err := db.Create(&defaultCameras).Error; err != nil {
+			return nil, err
+		}
+	}
 
 	minioClient, err := minio.New(minioEndpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(minioAccessKey, minioSecretKey, ""),
@@ -56,10 +81,14 @@ func New(dsn string, minioEndpoint, minioAccessKey, minioSecretKey, bucketName s
 		}
 	}
 
-
 	return &Repository{
 		db:     db,
 		minio:  minioClient,
 		bucket: bucketName,
 	}, nil
+}
+
+// strPtr — вспомогательная функция для создания *string из литерала.
+func strPtr(s string) *string {
+	return &s
 }

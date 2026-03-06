@@ -17,6 +17,7 @@ type Config struct {
 	MinIO       MinIOConfig
 	JWT         JWTConfig
 	Redis       RedisConfig
+	SMTP        SMTPConfig
 }
 
 type MinIOConfig struct {
@@ -42,11 +43,18 @@ type RedisConfig struct {
 	ReadTimeout time.Duration
 }
 
+type SMTPConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	From     string
+}
+
 func NewConfig() (*Config, error) {
 	var err error
 
 	configName := "config"
-	// Загружаем переменные окружения из файла app.env
 	_ = godotenv.Load("app.env")
 	_ = godotenv.Load()
 	if os.Getenv("CONFIG_NAME") != "" {
@@ -64,14 +72,12 @@ func NewConfig() (*Config, error) {
 		return nil, err
 	}
 
-	cfg := &Config{}           // создаем объект конфига
-	err = viper.Unmarshal(cfg) // читаем информацию из файла,
-	// конвертируем и затем кладем в нашу переменную cfg
+	cfg := &Config{}
+	err = viper.Unmarshal(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// парсим JWT настройки
 	expiresInStr := viper.GetString("JWT.ExpiresIn")
 	expiresIn, err := time.ParseDuration(expiresInStr)
 	if err != nil {
@@ -79,7 +85,6 @@ func NewConfig() (*Config, error) {
 	}
 	cfg.JWT.ExpiresIn = expiresIn
 
-	// парсим Redis настройки из .env
 	cfg.Redis.Host = os.Getenv("REDIS_HOST")
 	cfg.Redis.Port, err = strconv.Atoi(os.Getenv("REDIS_PORT"))
 	if err != nil {
@@ -88,7 +93,6 @@ func NewConfig() (*Config, error) {
 	cfg.Redis.Password = os.Getenv("REDIS_PASSWORD")
 	cfg.Redis.User = os.Getenv("REDIS_USER")
 
-	// парсим Redis таймауты из config.toml
 	dialTimeoutStr := viper.GetString("Redis.DialTimeout")
 	dialTimeout, err := time.ParseDuration(dialTimeoutStr)
 	if err != nil {
@@ -103,7 +107,35 @@ func NewConfig() (*Config, error) {
 	}
 	cfg.Redis.ReadTimeout = readTimeout
 
+	// SMTP config from environment with defaults
+	cfg.SMTP.Host = getEnv("SMTP_HOST", "smtp.gmail.com")
+	cfg.SMTP.Port = getEnvAsInt("SMTP_PORT", 587)
+	cfg.SMTP.Username = getEnv("SMTP_USERNAME", "ebookstore1504@gmail.com")
+	cfg.SMTP.Password = getEnv("SMTP_PASSWORD", "nlwq ujqh xzlz saie")
+	cfg.SMTP.From = getEnv("SMTP_FROM", "ebookstore1504@gmail.com")
+
 	log.Info("config parsed")
 
 	return cfg, nil
+}
+
+// getEnv получает переменную окружения или возвращает значение по умолчанию
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getEnvAsInt получает переменную окружения как int или возвращает значение по умолчанию
+func getEnvAsInt(key string, defaultValue int) int {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue
+	}
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }

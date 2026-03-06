@@ -16,3 +16,7 @@ SigningMethod = "HS256"
 [Redis]
 DialTimeout = "10s"
 ReadTimeout = "10s"
+
+[SMTP]
+Host = "smtp.gmail.com"
+Port = 587

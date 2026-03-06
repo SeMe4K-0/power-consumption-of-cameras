@@ -3,9 +3,11 @@ package main
 import (
 	"awesomeProject/internal/app/config"
 	"awesomeProject/internal/app/dsn"
+	"awesomeProject/internal/app/email"
 	"awesomeProject/internal/app/handler"
 	"awesomeProject/internal/app/redis"
 	"awesomeProject/internal/app/repository"
+	"awesomeProject/internal/app/service"
 	"awesomeProject/internal/pkg"
 	"context"
 
@@ -55,13 +57,16 @@ func main() {
 		logrus.Fatalf("error initializing redis: %v", err)
 	}
 
+	emailService := email.NewEmailService(conf.SMTP)
+	requestService := service.NewRequestService(rep)
+
 	hand := handler.NewHandler(rep, conf, func(requireModerator bool) gin.HandlerFunc {
 		tempApp := pkg.NewApp(conf, router, nil, redisClient)
 		return tempApp.WithAuthCheck(requireModerator)
 	}, func() gin.HandlerFunc {
 		tempApp := pkg.NewApp(conf, router, nil, redisClient)
 		return tempApp.WithOptionalAuthCheck()
-	}, redisClient)
+	}, redisClient, emailService, requestService)
 
 	application := pkg.NewApp(conf, router, hand, redisClient)
 	application.RunApp()

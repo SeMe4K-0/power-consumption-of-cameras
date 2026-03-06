@@ -1,8 +1,9 @@
 package ds
 
 type User struct {
-	ID          uint   `gorm:"primaryKey;autoIncrement" json:"id"`
-	Username    string `gorm:"type:varchar(50);unique;not null" json:"username"`
-	Password    string `gorm:"type:varchar(255);not null" json:"password,omitempty"`
-	IsProfessor bool   `gorm:"type:boolean;default:false" json:"is_professor"`
+	ID               uint   `gorm:"primaryKey;autoIncrement" json:"id"`
+	Username         string `gorm:"type:varchar(50);unique;not null" json:"username"`
+	Password         string `gorm:"type:varchar(255);not null" json:"password,omitempty"`
+	Email            string `gorm:"type:varchar(255);not null" json:"email"`
+	IsLeadingEngineer bool   `gorm:"type:boolean;default:false" json:"is_leading_engineer"`
 }

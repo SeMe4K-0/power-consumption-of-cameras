@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"awesomeProject/internal/app/ds"
+	"awesomeProject/internal/app/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,20 +34,20 @@ func (h *Handler) GetRequestCamerasCalculationsAPI(ctx *gin.Context) {
 	}
 
 	userID, userExists := ctx.Get("user_id")
-	isProfessor, isProfessorExists := ctx.Get("is_professor")
+	isLeadingEngineer, isLeadingEngineerExists := ctx.Get("is_leading_engineer")
 
 	var userIDPtr *uint
-	var isProfessorBool bool
+	var isLeadingEngineerBool bool
 
 	if userExists {
 		uid := userID.(uint)
 		userIDPtr = &uid
 	}
-	if isProfessorExists {
-		isProfessorBool = isProfessor.(bool)
+	if isLeadingEngineerExists {
+		isLeadingEngineerBool = isLeadingEngineer.(bool)
 	}
 
-	requests, err := h.Repository.GetRequestCamerasCalculations(status, startDate, endDate, userIDPtr, isProfessorBool)
+	requests, err := h.Repository.GetRequestCamerasCalculations(status, startDate, endDate, userIDPtr, isLeadingEngineerBool)
 	if err != nil {
 		h.errorHandler(ctx, http.StatusInternalServerError, err)
 		return
@@ -121,16 +122,19 @@ func (h *Handler) GetRequestCamerasCalculationAPI(ctx *gin.Context) {
 		moderatorLogin = request.Moderator.Username
 	}
 
+	resultsCount, _ := h.Repository.GetResultsCountForRequest(request.ID)
+
 	ctx.JSON(http.StatusOK, gin.H{
-		"id":           request.ID,
-		"project_name": request.ProjectName,
-		"status":       request.Status,
-		"created_at":   request.CreatedAt,
-		"formed_at":    request.FormedAt,
-		"completed_at": request.CompletedAt,
-		"creator":      creatorLogin,
-		"moderator":    moderatorLogin,
-		"calculations": simplifiedCalcs,
+		"id":            request.ID,
+		"project_name":  request.ProjectName,
+		"status":        request.Status,
+		"created_at":    request.CreatedAt,
+		"formed_at":     request.FormedAt,
+		"completed_at":  request.CompletedAt,
+		"creator":       creatorLogin,
+		"moderator":     moderatorLogin,
+		"calculations":  simplifiedCalcs,
+		"results_count": resultsCount,
 	})
 }
 
@@ -314,7 +318,7 @@ func (h *Handler) CompleteRequestCamerasCalculationAPI(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.Repository.CompleteRequest(uint(id), req.Approve, userID.(uint)); err != nil {
+	if err := h.RequestService.CompleteRequest(uint(id), req.Approve, userID.(uint)); err != nil {
 		h.errorHandler(ctx, http.StatusBadRequest, err)
 		return
 	}
@@ -327,5 +331,36 @@ func (h *Handler) CompleteRequestCamerasCalculationAPI(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"status":  "success",
 		"message": message,
+	})
+}
+
+func (h *Handler) ApplyAsyncResultAPI(ctx *gin.Context) {
+	var req struct {
+		RequestID    uint                           `json:"request_id" binding:"required"`
+		Calculations []service.CalculationResult    `json:"calculations" binding:"required"`
+		Token        string                          `json:"token" binding:"required"`
+	}
+
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		h.errorHandler(ctx, http.StatusBadRequest, err)
+		return
+	}
+
+	if req.Token != service.AsyncTokenValue {
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"status":      "error",
+			"description": "invalid async token",
+		})
+		return
+	}
+
+	if err := h.RequestService.ApplyAsyncResult(req.RequestID, req.Calculations); err != nil {
+		h.errorHandler(ctx, http.StatusInternalServerError, err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "async result applied",
 	})
 }

@@ -2,8 +2,10 @@ package handler
 
 import (
 	"awesomeProject/internal/app/config"
+	"awesomeProject/internal/app/email"
 	"awesomeProject/internal/app/redis"
 	"awesomeProject/internal/app/repository"
+	"awesomeProject/internal/app/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -15,15 +17,19 @@ type Handler struct {
 	AuthCheck         func(requireModerator bool) gin.HandlerFunc
 	OptionalAuthCheck func() gin.HandlerFunc
 	Redis             *redis.Client
+	EmailService      *email.Service
+	RequestService    *service.RequestService
 }
 
-func NewHandler(r *repository.Repository, cfg *config.Config, authCheck func(requireModerator bool) gin.HandlerFunc, optionalAuthCheck func() gin.HandlerFunc, redisClient *redis.Client) *Handler {
+func NewHandler(r *repository.Repository, cfg *config.Config, authCheck func(requireModerator bool) gin.HandlerFunc, optionalAuthCheck func() gin.HandlerFunc, redisClient *redis.Client, emailService *email.Service, requestService *service.RequestService) *Handler {
 	return &Handler{
 		Repository:        r,
 		Config:            cfg,
 		AuthCheck:         authCheck,
 		OptionalAuthCheck: optionalAuthCheck,
 		Redis:             redisClient,
+		EmailService:      emailService,
+		RequestService:    requestService,
 	}
 }
 
@@ -42,6 +48,7 @@ func (h *Handler) registerProfileEndpoints(api *gin.RouterGroup) {
 	{
 		profile.POST("/register", h.Register)
 		profile.POST("/login", h.Login)
+		profile.POST("/verify-code", h.VerifyCode)
 		profile.POST("/logout", h.Logout)
 
 		profileProtected := profile.Group("")
@@ -97,6 +104,9 @@ func (h *Handler) registerRequestEndpoints(api *gin.RouterGroup) {
 	{
 		requestsModerator.PUT("/:id/complete", h.CompleteRequestCamerasCalculationAPI)
 	}
+
+	// Endpoint для асинхронного сервиса
+	api.POST("/request_cameras_calculations/update-consumption", h.ApplyAsyncResultAPI)
 
 	calculations := api.Group("/cameras_calculations")
 	calculations.Use(h.AuthCheck(false))
