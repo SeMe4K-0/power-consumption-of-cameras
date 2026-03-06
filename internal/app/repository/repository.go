@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"it-maintenance-backend/internal/app/models"
 	"time"
@@ -12,6 +14,14 @@ import (
 type Repository struct {
 	db *gorm.DB
 }
+
+const cameraSelectColumns = `
+	id, name, description, status, image_url, price, power, type, resolution, night_vision, created_at, updated_at
+`
+
+const orderSelectColumns = `
+	id, status, created_at, creator_id, formation_date, completion_date, moderator_id, client_name, project_name, calculated_field
+`
 
 func New(dsn string) (*Repository, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -28,90 +38,381 @@ func (r *Repository) GetDB() *gorm.DB {
 	return r.db
 }
 
+func scanCameraRow(rows *sql.Rows) (models.Camera, error) {
+	var camera models.Camera
+	var imageURL sql.NullString
+
+	err := rows.Scan(
+		&camera.ID,
+		&camera.Name,
+		&camera.Description,
+		&camera.Status,
+		&imageURL,
+		&camera.Price,
+		&camera.Power,
+		&camera.Type,
+		&camera.Resolution,
+		&camera.NightVision,
+		&camera.CreatedAt,
+		&camera.UpdatedAt,
+	)
+	if err != nil {
+		return models.Camera{}, err
+	}
+
+	if imageURL.Valid {
+		camera.ImageURL = &imageURL.String
+	}
+
+	return camera, nil
+}
+
+func scanOrderRow(rows *sql.Rows) (models.SurveillanceOrder, error) {
+	var order models.SurveillanceOrder
+	var formationDate sql.NullTime
+	var completionDate sql.NullTime
+	var moderatorID sql.NullInt64
+
+	err := rows.Scan(
+		&order.ID,
+		&order.Status,
+		&order.CreatedAt,
+		&order.CreatorID,
+		&formationDate,
+		&completionDate,
+		&moderatorID,
+		&order.ClientName,
+		&order.ProjectName,
+		&order.CalculatedField,
+	)
+	if err != nil {
+		return models.SurveillanceOrder{}, err
+	}
+
+	if formationDate.Valid {
+		order.FormationDate = &formationDate.Time
+	}
+	if completionDate.Valid {
+		order.CompletionDate = &completionDate.Time
+	}
+	if moderatorID.Valid {
+		value := uint(moderatorID.Int64)
+		order.ModeratorID = &value
+	}
+
+	return order, nil
+}
+
 func (r *Repository) GetCameras() ([]models.Camera, error) {
 	var cameras []models.Camera
-	result := r.db.Table("public.cameras").Find(&cameras)
-	fmt.Printf("DEBUG: Found %d cameras, error: %v\n", len(cameras), result.Error)
-	return cameras, result.Error
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE cameras_cursor NO SCROLL CURSOR FOR SELECT %s FROM public.cameras ORDER BY id", cameraSelectColumns),
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE cameras_cursor")
+
+		rows, err := tx.Raw("FETCH ALL FROM cameras_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			camera, scanErr := scanCameraRow(rows)
+			if scanErr != nil {
+				return scanErr
+			}
+			cameras = append(cameras, camera)
+		}
+		return rows.Err()
+	})
+
+	return cameras, err
 }
 
 func (r *Repository) GetCameraByID(id uint) (models.Camera, error) {
 	var camera models.Camera
-	result := r.db.First(&camera, id)
-	return camera, result.Error
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE camera_by_id_cursor NO SCROLL CURSOR FOR SELECT %s FROM public.cameras WHERE id = $1", cameraSelectColumns),
+			id,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE camera_by_id_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM camera_by_id_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			return gorm.ErrRecordNotFound
+		}
+
+		camera, err = scanCameraRow(rows)
+		if err != nil {
+			return err
+		}
+
+		return rows.Err()
+	})
+
+	return camera, err
 }
 
 func (r *Repository) GetCamerasBySearch(query string) ([]models.Camera, error) {
 	var cameras []models.Camera
 	searchQuery := "%" + query + "%"
-	result := r.db.Table("public.cameras").Where("(name ILIKE ? OR description ILIKE ? OR type ILIKE ?)", searchQuery, searchQuery, searchQuery).Find(&cameras)
-	fmt.Printf("DEBUG: Search '%s' found %d cameras, error: %v\n", query, len(cameras), result.Error)
-	return cameras, result.Error
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE camera_search_cursor NO SCROLL CURSOR FOR SELECT %s FROM public.cameras WHERE (name ILIKE $1 OR description ILIKE $2 OR type ILIKE $3) ORDER BY id", cameraSelectColumns),
+			searchQuery,
+			searchQuery,
+			searchQuery,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE camera_search_cursor")
+
+		rows, err := tx.Raw("FETCH ALL FROM camera_search_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			camera, scanErr := scanCameraRow(rows)
+			if scanErr != nil {
+				return scanErr
+			}
+			cameras = append(cameras, camera)
+		}
+		return rows.Err()
+	})
+
+	return cameras, err
 }
 
 func (r *Repository) HasDraftOrder(userID uint) bool {
-	var count int64
-	r.db.Model(&models.SurveillanceOrder{}).Where("creator_id = ? AND status = ?", userID, models.OrderStatusDraft).Count(&count)
+	count := int64(0)
+	_ = r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			"DECLARE draft_order_count_cursor NO SCROLL CURSOR FOR SELECT COUNT(*) FROM surveillance_orders WHERE creator_id = $1 AND status = $2",
+			userID,
+			models.OrderStatusDraft,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE draft_order_count_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM draft_order_count_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if rows.Next() {
+			if err := rows.Scan(&count); err != nil {
+				return err
+			}
+		}
+
+		return rows.Err()
+	})
+
 	return count > 0
 }
 
 func (r *Repository) GetCurrentOrder(userID uint) (models.SurveillanceOrder, error) {
 	var order models.SurveillanceOrder
-	err := r.db.Preload("OrderCameras.Camera").Where("creator_id = ? AND status = ?", userID, models.OrderStatusDraft).First(&order).Error
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE current_order_cursor NO SCROLL CURSOR FOR SELECT %s FROM surveillance_orders WHERE creator_id = $1 AND status = $2 ORDER BY id LIMIT 1", orderSelectColumns),
+			userID,
+			models.OrderStatusDraft,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE current_order_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM current_order_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			return gorm.ErrRecordNotFound
+		}
+
+		order, err = scanOrderRow(rows)
+		if err != nil {
+			return err
+		}
+
+		return rows.Err()
+	})
 	if err != nil {
 		return models.SurveillanceOrder{}, err
 	}
+
+	orderCameras, err := r.GetOrderCameras(order.ID)
+	if err != nil {
+		return models.SurveillanceOrder{}, err
+	}
+	order.OrderCameras = orderCameras
+
 	return order, nil
 }
 
 func (r *Repository) CreateOrder(userID uint, clientName, projectName string) (models.SurveillanceOrder, error) {
-	order := models.SurveillanceOrder{
-		CreatorID:   userID,
-		Status:      models.OrderStatusDraft,
-		CreatedAt:   time.Now(),
-		ClientName:  clientName,
-		ProjectName: projectName,
-	}
-	result := r.db.Create(&order)
-	return order, result.Error
+	order := models.SurveillanceOrder{}
+	now := time.Now()
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			`INSERT INTO surveillance_orders (status, created_at, creator_id, client_name, project_name, calculated_field)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			models.OrderStatusDraft,
+			now,
+			userID,
+			clientName,
+			projectName,
+			0,
+		).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE created_order_cursor NO SCROLL CURSOR FOR SELECT %s FROM surveillance_orders WHERE creator_id = $1 AND status = $2 ORDER BY id DESC LIMIT 1", orderSelectColumns),
+			userID,
+			models.OrderStatusDraft,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE created_order_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM created_order_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			return gorm.ErrRecordNotFound
+		}
+
+		order, err = scanOrderRow(rows)
+		if err != nil {
+			return err
+		}
+		return rows.Err()
+	})
+
+	return order, err
 }
 
 func (r *Repository) AddCameraToOrder(orderID, cameraID uint, quantity int, comment, other string) error {
-	var orderCamera models.OrderCamera
-	err := r.db.Where("order_id = ? AND camera_id = ?", orderID, cameraID).First(&orderCamera).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		existingQuantity := 0
+		hasRecord := false
 
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return err
-	}
-
-	if err == gorm.ErrRecordNotFound {
-		orderCamera = models.OrderCamera{
-			OrderID:  orderID,
-			CameraID: cameraID,
-			Quantity: quantity,
-			Comment:  comment,
-			Other:    other,
-			OrderNum: 1, // По умолчанию 1, можно доработать логику порядка
-			IsMain:   false,
+		if err := tx.Exec(
+			"DECLARE order_camera_exists_cursor NO SCROLL CURSOR FOR SELECT quantity FROM order_cameras WHERE order_id = $1 AND camera_id = $2",
+			orderID,
+			cameraID,
+		).Error; err != nil {
+			return err
 		}
-		result := r.db.Create(&orderCamera)
-		return result.Error
-	} else {
-		orderCamera.Quantity += quantity
-		result := r.db.Save(&orderCamera)
-		return result.Error
-	}
+
+		rows, err := tx.Raw("FETCH NEXT FROM order_camera_exists_cursor").Rows()
+		if err != nil {
+			tx.Exec("CLOSE order_camera_exists_cursor")
+			return err
+		}
+
+		if rows.Next() {
+			hasRecord = true
+			if err := rows.Scan(&existingQuantity); err != nil {
+				rows.Close()
+				tx.Exec("CLOSE order_camera_exists_cursor")
+				return err
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			tx.Exec("CLOSE order_camera_exists_cursor")
+			return err
+		}
+		rows.Close()
+		tx.Exec("CLOSE order_camera_exists_cursor")
+
+		if !hasRecord {
+			return tx.Exec(
+				`INSERT INTO order_cameras (order_id, camera_id, quantity, order_num, is_main, comment, other)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+				orderID,
+				cameraID,
+				quantity,
+				1,
+				false,
+				comment,
+				other,
+			).Error
+		}
+
+		return tx.Exec(
+			"UPDATE order_cameras SET quantity = $1, comment = $2, other = $3 WHERE order_id = $4 AND camera_id = $5",
+			existingQuantity+quantity,
+			comment,
+			other,
+			orderID,
+			cameraID,
+		).Error
+	})
 }
 
 func (r *Repository) GetOrderFormData(userID uint) (models.OrderFormData, error) {
-	var order models.SurveillanceOrder
-	err := r.db.Preload("OrderCameras.Camera").Where("creator_id = ? AND status = ?", userID, models.OrderStatusDraft).First(&order).Error
+	order, err := r.GetCurrentOrder(userID)
 	if err != nil {
 		return models.OrderFormData{}, err
 	}
 
 	var availableCameras []models.Camera
-	r.db.Where("status = ?", models.CameraStatusActive).Find(&availableCameras)
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE active_cameras_cursor NO SCROLL CURSOR FOR SELECT %s FROM cameras WHERE status = $1 ORDER BY id", cameraSelectColumns),
+			models.CameraStatusActive,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE active_cameras_cursor")
+
+		rows, err := tx.Raw("FETCH ALL FROM active_cameras_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			camera, scanErr := scanCameraRow(rows)
+			if scanErr != nil {
+				return scanErr
+			}
+			availableCameras = append(availableCameras, camera)
+		}
+		return rows.Err()
+	})
+	if err != nil {
+		return models.OrderFormData{}, err
+	}
 
 	return models.OrderFormData{
 		Order:            order,
@@ -121,34 +422,93 @@ func (r *Repository) GetOrderFormData(userID uint) (models.OrderFormData, error)
 }
 
 func (r *Repository) GetOrdersCount(userID uint) int64 {
-	var count int64
-	r.db.Model(&models.SurveillanceOrder{}).Where("creator_id = ?", userID).Count(&count)
+	count := int64(0)
+	_ = r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			"DECLARE orders_count_cursor NO SCROLL CURSOR FOR SELECT COUNT(*) FROM surveillance_orders WHERE creator_id = $1",
+			userID,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE orders_count_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM orders_count_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if rows.Next() {
+			if err := rows.Scan(&count); err != nil {
+				return err
+			}
+		}
+		return rows.Err()
+	})
+
 	return count
 }
 
 func (r *Repository) GetCurrentOrderServicesCount(userID uint) int64 {
-	var count int64
-	var order models.SurveillanceOrder
-	err := r.db.Where("creator_id = ? AND status = ?", userID, models.OrderStatusDraft).First(&order).Error
-	if err != nil {
-		return 0 // Если заявки нет, возвращаем 0
+	orderID := r.GetFirstOrderID(userID)
+	if orderID == 0 {
+		return 0
 	}
-
-	r.db.Model(&models.OrderCamera{}).Where("order_id = ?", order.ID).Count(&count)
-	return count
+	return r.GetOrderServicesCount(orderID)
 }
 
 func (r *Repository) GetOrderServicesCount(orderID uint) int64 {
-	var count int64
-	r.db.Model(&models.OrderCamera{}).Where("order_id = ?", orderID).Count(&count)
+	count := int64(0)
+	_ = r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			"DECLARE order_services_count_cursor NO SCROLL CURSOR FOR SELECT COUNT(*) FROM order_cameras WHERE order_id = $1",
+			orderID,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE order_services_count_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM order_services_count_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if rows.Next() {
+			if err := rows.Scan(&count); err != nil {
+				return err
+			}
+		}
+		return rows.Err()
+	})
+
 	return count
 }
 
 func (r *Repository) CheckOrderAccess(orderID uint, userID uint) error {
-	var order models.SurveillanceOrder
-	err := r.db.Where("id = ? AND creator_id = ?", orderID, userID).First(&order).Error
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			"DECLARE order_access_cursor NO SCROLL CURSOR FOR SELECT id FROM surveillance_orders WHERE id = $1 AND creator_id = $2",
+			orderID,
+			userID,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE order_access_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM order_access_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			return gorm.ErrRecordNotFound
+		}
+		return rows.Err()
+	})
 	if err != nil {
-		return err // Заявка не найдена или не принадлежит пользователю
+		return err
 	}
 
 	servicesCount := r.GetOrderServicesCount(orderID)
@@ -160,56 +520,132 @@ func (r *Repository) CheckOrderAccess(orderID uint, userID uint) error {
 }
 
 func (r *Repository) GetFirstOrderID(userID uint) uint {
-	var order models.SurveillanceOrder
-	result := r.db.Where("creator_id = ? AND status = ?", userID, models.OrderStatusDraft).First(&order)
-	if result.Error != nil {
-		fmt.Printf("DEBUG: GetFirstOrderID error for user %d: %v\n", userID, result.Error)
+	orderID := uint(0)
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			"DECLARE first_order_cursor NO SCROLL CURSOR FOR SELECT id FROM surveillance_orders WHERE creator_id = $1 AND status = $2 ORDER BY id LIMIT 1",
+			userID,
+			models.OrderStatusDraft,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE first_order_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM first_order_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			return gorm.ErrRecordNotFound
+		}
+
+		return rows.Scan(&orderID)
+	})
+	if err != nil {
 		return 0
 	}
-	fmt.Printf("DEBUG: GetFirstOrderID found order %d for user %d\n", order.ID, userID)
-	return order.ID
+	return orderID
 }
 
 func (r *Repository) GetOrderByID(id uint) (models.SurveillanceOrder, error) {
 	var order models.SurveillanceOrder
-	result := r.db.First(&order, id)
-	return order, result.Error
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(
+			fmt.Sprintf("DECLARE order_by_id_cursor NO SCROLL CURSOR FOR SELECT %s FROM surveillance_orders WHERE id = $1", orderSelectColumns),
+			id,
+		).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE order_by_id_cursor")
+
+		rows, err := tx.Raw("FETCH NEXT FROM order_by_id_cursor").Rows()
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		if !rows.Next() {
+			return gorm.ErrRecordNotFound
+		}
+
+		order, err = scanOrderRow(rows)
+		if err != nil {
+			return err
+		}
+		return rows.Err()
+	})
+
+	if err != nil {
+		return models.SurveillanceOrder{}, err
+	}
+
+	orderCameras, err := r.GetOrderCameras(order.ID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return models.SurveillanceOrder{}, err
+	}
+	order.OrderCameras = orderCameras
+	return order, nil
 }
 
 func (r *Repository) GetOrderCameras(orderID uint) ([]models.OrderCamera, error) {
 	var orderCameras []models.OrderCamera
 
-	rows, err := r.db.Raw(`
-		SELECT oc.order_id, oc.camera_id, oc.quantity, oc.order_num, oc.is_main, oc.comment, oc.other,
-		       c.id, c.name, c.description, c.status, c.image_url, c.price, c.power, c.type, c.resolution, c.night_vision, c.created_at, c.updated_at
-		FROM order_cameras oc
-		JOIN cameras c ON oc.camera_id = c.id
-		WHERE oc.order_id = ?
-		ORDER BY oc.order_num
-	`, orderID).Rows()
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(`
+			DECLARE order_cameras_cursor NO SCROLL CURSOR FOR
+			SELECT
+				oc.order_id, oc.camera_id, oc.quantity, oc.order_num, oc.is_main, oc.comment, oc.other,
+				c.id, c.name, c.description, c.status, c.image_url, c.price, c.power, c.type, c.resolution, c.night_vision, c.created_at, c.updated_at
+			FROM order_cameras oc
+			JOIN cameras c ON oc.camera_id = c.id
+			WHERE oc.order_id = $1
+			ORDER BY oc.order_num
+		`, orderID).Error; err != nil {
+			return err
+		}
+		defer tx.Exec("CLOSE order_cameras_cursor")
 
-	if err != nil {
-		return orderCameras, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var oc models.OrderCamera
-		var c models.Camera
-
-		err := rows.Scan(
-			&oc.OrderID, &oc.CameraID, &oc.Quantity, &oc.OrderNum, &oc.IsMain, &oc.Comment, &oc.Other,
-			&c.ID, &c.Name, &c.Description, &c.Status, &c.ImageURL, &c.Price, &c.Power, &c.Type, &c.Resolution, &c.NightVision, &c.CreatedAt, &c.UpdatedAt,
-		)
+		rows, err := tx.Raw("FETCH ALL FROM order_cameras_cursor").Rows()
 		if err != nil {
-			return orderCameras, err
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var oc models.OrderCamera
+			var c models.Camera
+			var imageURL sql.NullString
+			var comment sql.NullString
+			var other sql.NullString
+
+			err := rows.Scan(
+				&oc.OrderID, &oc.CameraID, &oc.Quantity, &oc.OrderNum, &oc.IsMain, &comment, &other,
+				&c.ID, &c.Name, &c.Description, &c.Status, &imageURL, &c.Price, &c.Power, &c.Type, &c.Resolution, &c.NightVision, &c.CreatedAt, &c.UpdatedAt,
+			)
+			if err != nil {
+				return err
+			}
+
+			if imageURL.Valid {
+				c.ImageURL = &imageURL.String
+			}
+			if comment.Valid {
+				oc.Comment = comment.String
+			}
+			if other.Valid {
+				oc.Other = other.String
+			}
+
+			oc.Camera = c
+			orderCameras = append(orderCameras, oc)
 		}
 
-		oc.Camera = c
-		orderCameras = append(orderCameras, oc)
-	}
+		return rows.Err()
+	})
 
-	return orderCameras, nil
+	return orderCameras, err
 }
 
 func (r *Repository) DeleteOrder(orderID uint) error {
