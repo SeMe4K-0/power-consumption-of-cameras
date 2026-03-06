@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расчёт энергопотребления - EnergyCam</title>
+    <link rel="stylesheet" href="/static/styles/main.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/cameras" class="home-link">
+                    <img src="/static/img/logo.png" alt="EnergyCam" class="img-responsive">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-cart-section">
+        <div class="container">
+            <div class="search-cart-content">
+                <div class="search-form">
+                    <form action="/cameras" method="GET">
+                        <div class="search_form">
+                            <input type="text" name="camerasearch" placeholder="Поиск камер">
+                            <button type="submit">
+                                🔍
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="cart-badge active">
+                    <a href="/electricity-calculation/{{.firstOrderID}}" class="order-link">
+                        📱 <span class="badge-count">{{if .servicesCount}}{{.servicesCount}}{{else}}0{{end}}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="container">
+        <div class="page-header">
+            <h1>Расчёт № {{.order.ID}}</h1>
+        </div>
+
+        {{if .order}}
+        <div class="calculation-page">
+            <div class="calculation-name-section">
+                <label class="calculation-name-label">Название расчёта:</label>
+                <input type="text" class="calculation-name-input" value="{{.order.ProjectName}}" readonly>
+            </div>
+
+            <div class="tariff-section">
+                <label class="tariff-label">Тариф на электроэнергию (руб/кВт·ч):</label>
+                <input type="number" class="tariff-input" value="5.50" step="0.01" min="0">
+            </div>
+
+            {{if .orderCameras}}
+            <div class="devices-section">
+                <h3>Устройства в проекте</h3>
+                
+                <!-- Заголовок таблицы -->
+                <div class="table-header">
+                    <div class="table-header-cell">Изображение</div>
+                    <div class="table-header-cell">Название</div>
+                    <div class="table-header-cell">Количество</div>
+                    <div class="table-header-cell">Мощность</div>
+                    <div class="table-header-cell">Время работы в сутки</div>
+                    <div class="table-header-cell">Суточное потребление</div>
+                    <div class="table-header-cell">Месячная стоимость</div>
+                </div>
+
+                <!-- Строки устройств -->
+                <div class="devices-list">
+                    {{range $index, $item := .orderCameras}}
+                    <div class="device-item" data-camera-id="{{$item.Camera.ID}}" data-power="{{$item.Camera.Power}}">
+                        <div class="device-image">
+                            <img src="{{imageURL $item.Camera.ImageURL}}" 
+                                 alt="{{$item.Camera.Name}}" 
+                                 onerror="this.src='/static/img/placeholder.jpg'">
+                        </div>
+                        <div class="device-name">
+                            <h4>{{$item.Camera.Name}}</h4>
+                            <button class="details-btn" data-camera-id="{{$item.Camera.ID}}" onclick="showDetails(this.dataset.cameraId)">Подробнее</button>
+                        </div>
+                        <div class="device-quantity">
+                            <input type="number" class="quantity-input" value="{{$item.Quantity}}" min="1" max="100" data-field="quantity">
+                            <span class="quantity-unit">шт</span>
+                        </div>
+                        <div class="device-power">
+                            <span class="power-value">{{printf "%.1f" $item.Camera.Power}}</span>
+                            <span class="power-unit">Вт</span>
+                        </div>
+                        <div class="device-hours">
+                            <input type="number" class="hours-input" value="24" min="1" max="24" step="0.5" data-field="hours">
+                            <span class="hours-unit">ч</span>
+                        </div>
+                        <div class="device-daily">
+                            <span class="daily-value">{{printf "%.3f" (divide (multiply $item.Camera.Power 24) 1000)}}</span>
+                            <span class="daily-unit">кВт·ч</span>
+                        </div>
+                        <div class="device-cost">
+                            <span class="cost-value">{{printf "%.0f" (multiply (multiply (multiply (divide (multiply $item.Camera.Power 24) 1000) (float64 $item.Quantity)) 30) 5.50)}}</span>
+                            <span class="cost-unit">руб</span>
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+
+            <div class="summary-section">
+                <h3>Итоговые расчеты</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">Общая мощность:</span>
+                        <span class="summary-value">{{printf "%.1f" .order.CalculatedField}} Вт</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Суточное потребление:</span>
+                        <span class="summary-value">{{printf "%.3f" (multiply .order.CalculatedField 24)}} кВт·ч</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Месячная стоимость:</span>
+                        <span class="summary-value">{{printf "%.0f" (multiply (multiply .order.CalculatedField 24) 5.50)}} руб</span>
+                    </div>
+                </div>
+            </div>
+            {{else}}
+            <div class="empty-order">
+                <p>В проекте пока нет устройств</p>
+                <a href="/cameras" class="btn primary">Добавить устройства</a>
+            </div>
+            {{end}}
+        </div>
+
+        {{if eq .order.Status "draft"}}
+        <div class="order-actions">
+            <button class="btn danger" data-order-id="{{.order.ID}}" onclick="deleteOrder(this.dataset.orderId)">Удалить расчёт</button>
+            <a href="/cameras" class="btn">Добавить устройства</a>
+        </div>
+        {{end}}
+        {{else}}
+        <div class="empty-order">
+            <p>У вас пока нет проектов</p>
+            <a href="/cameras" class="btn primary">Начать расчёт</a>
+        </div>
+        {{end}}
+    </main>
+
+    <script>
+        function deleteOrder(orderId) {
+            if (confirm('Вы уверены, что хотите удалить этот расчёт?')) {
+                fetch(`/order/delete/${orderId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                        window.location.href = '/cameras';
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                    }
+                })
+                .catch(error => {
+                    alert('Ошибка: ' + error.message);
+                });
+            }
+        }
+
+        function showDetails(cameraId) {
+            window.location.href = `/camera/${cameraId}`;
+        }
+
+        // Обновление расчетов при изменении тарифа
+        document.querySelector('.tariff-input').addEventListener('input', function() {
+            updateAllCalculations();
+        });
+
+        // Обновление расчетов при изменении количества или времени работы
+        document.addEventListener('input', function(e) {
+            if (e.target.classList.contains('quantity-input') || e.target.classList.contains('hours-input')) {
+                updateDeviceCalculation(e.target.closest('.device-item'));
+                updateSummaryCalculations();
+            }
+        });
+
+        function updateDeviceCalculation(deviceItem) {
+            const power = parseFloat(deviceItem.dataset.power);
+            const quantity = parseFloat(deviceItem.querySelector('.quantity-input').value) || 1;
+            const hours = parseFloat(deviceItem.querySelector('.hours-input').value) || 24;
+            const tariff = parseFloat(document.querySelector('.tariff-input').value) || 5.50;
+            
+            // Суточное потребление для одного устройства (кВт·ч)
+            const dailyConsumption = (power * hours) / 1000;
+            // Месячная стоимость с учетом количества устройств (руб) - умножаем на 30 дней
+            const monthlyCost = dailyConsumption * quantity * 30 * tariff;
+            
+            // Обновляем отображение
+            deviceItem.querySelector('.daily-value').textContent = dailyConsumption.toFixed(3);
+            deviceItem.querySelector('.cost-value').textContent = Math.round(monthlyCost);
+        }
+
+        function updateAllCalculations() {
+            document.querySelectorAll('.device-item').forEach(deviceItem => {
+                updateDeviceCalculation(deviceItem);
+            });
+            updateSummaryCalculations();
+        }
+
+        function updateSummaryCalculations() {
+            const tariff = parseFloat(document.querySelector('.tariff-input').value) || 5.50;
+            let totalPower = 0;
+            let totalDailyConsumption = 0;
+            let totalMonthlyCost = 0;
+            
+            document.querySelectorAll('.device-item').forEach(deviceItem => {
+                const power = parseFloat(deviceItem.dataset.power);
+                const quantity = parseFloat(deviceItem.querySelector('.quantity-input').value) || 1;
+                const hours = parseFloat(deviceItem.querySelector('.hours-input').value) || 24;
+                
+                // Общая мощность (Вт)
+                totalPower += power * quantity;
+                // Общее суточное потребление (кВт·ч) - сумма потребления всех устройств
+                totalDailyConsumption += (power * quantity * hours) / 1000;
+                // Общая месячная стоимость (руб) - сумма месячных стоимостей всех устройств
+                totalMonthlyCost += (power * quantity * hours * 30 * tariff) / 1000;
+            });
+            
+            // Обновляем итоговые расчеты
+            const summaryElements = document.querySelectorAll('.summary-item .summary-value');
+            if (summaryElements.length >= 3) {
+                summaryElements[0].textContent = `${totalPower.toFixed(1)} Вт`;
+                summaryElements[1].textContent = `${totalDailyConsumption.toFixed(3)} кВт·ч`;
+                summaryElements[2].textContent = `${Math.round(totalMonthlyCost)} руб`;
+            }
+        }
+
+        function showDetails(cameraId) {
+            // Переходим на страницу деталей камеры
+            window.location.href = `/camera/${cameraId}`;
+        }
+    </script>
+</body>
+</html>

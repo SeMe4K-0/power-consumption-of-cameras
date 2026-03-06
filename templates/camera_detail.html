@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.service.Name}} - Камеры видеонаблюдения</title>
+    <link rel="stylesheet" href="/static/styles/main.css?v=5">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="/cameras" class="home-link">
+                    <img src="/static/img/logo.png" alt="EnergyCam" class="img-responsive">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="search-cart-section">
+        <div class="container">
+            <div class="search-cart-content">
+                <div class="search-form">
+                    <form action="/cameras" method="GET">
+                        <div class="search_form">
+                            <input type="text" name="camerasearch" placeholder="Поиск камер">
+                            <button type="submit">
+                                🔍
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="cart-badge">
+                    <a href="/electricity-calculation/{{.firstOrderID}}" class="order-link">
+                        📱 <span class="badge-count">{{if .servicesCount}}{{.servicesCount}}{{else}}0{{end}}</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="main">
+        <div class="container">
+
+            <div class="product-info">
+                <div class="left-column">
+                    <div class="image-container">
+                        <img src="{{imageURL .service.ImageURL}}" 
+                             alt="{{.service.Name}}" 
+                             class="product-image"
+                             onerror="this.src='/static/img/placeholder.jpg'">
+                    </div>
+                </div>
+
+                <div class="right-column">
+                    <div class="product-details">
+                        <h1 class="product-title">{{.service.Name}}</h1>
+                        
+                        <div class="product-specs">
+                            <div class="spec-item">
+                                <span class="spec-label">Тип:</span>
+                                <span class="spec-value">{{translateType .service.Type}}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Разрешение:</span>
+                                <span class="spec-value">{{.service.Resolution}}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Мощность:</span>
+                                <span class="spec-value">{{.service.Power}} Вт</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Ночное видение:</span>
+                                <span class="spec-value">{{if .service.NightVision}}Да{{else}}Нет{{end}}</span>
+                            </div>
+                            <div class="spec-item">
+                                <span class="spec-label">Цена:</span>
+                                <span class="spec-value">{{.service.Price}} ₽</span>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Описание -->
+            <div class="product-description">
+                <h2 class="description-title">Описание</h2>
+                <div class="description-text">
+                    <p>{{translateDescription .service.Name .service.Description}}</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>
